@@ -1,10 +1,11 @@
 import { StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
+import { useColorScheme } from '@/components/useColorScheme';
 import { Pokemon } from '@/constants/Colors';
 import type { CardCondition } from '@/types/card';
 
-const COLORS: Record<CardCondition, string> = {
+const LIGHT_COLORS: Record<CardCondition, string> = {
   Mint: Pokemon.gbLight,
   'Near Mint': '#8BAC0F',
   Excellent: Pokemon.yellow,
@@ -13,7 +14,16 @@ const COLORS: Record<CardCondition, string> = {
   Poor: Pokemon.gbMid,
 };
 
-const TEXT_COLORS: Partial<Record<CardCondition, string>> = {
+const DARK_COLORS: Record<CardCondition, string> = {
+  Mint: '#FFFFFF',
+  'Near Mint': '#DDDDDD',
+  Excellent: '#CCCCCC',
+  Good: '#AAAAAA',
+  Played: '#777777',
+  Poor: '#555555',
+};
+
+const LIGHT_TEXT_COLORS: Partial<Record<CardCondition, string>> = {
   Excellent: Pokemon.navy,
   Mint: Pokemon.gbDark,
   'Near Mint': Pokemon.gbDark,
@@ -24,11 +34,14 @@ type Props = {
 };
 
 export default function ConditionBadge({ condition }: Props) {
+  const scheme = useColorScheme();
+  const isDark = scheme === 'dark';
+  const backgroundColor = isDark ? DARK_COLORS[condition] : LIGHT_COLORS[condition];
+  const textColor = isDark ? '#000000' : (LIGHT_TEXT_COLORS[condition] ?? '#FFFFFF');
+
   return (
-    <View style={[styles.badge, { backgroundColor: COLORS[condition] }]}>
-      <Text style={[styles.text, TEXT_COLORS[condition] ? { color: TEXT_COLORS[condition] } : null]}>
-        {condition}
-      </Text>
+    <View style={[styles.badge, { backgroundColor }]}>
+      <Text style={[styles.text, { color: textColor }]}>{condition}</Text>
     </View>
   );
 }
@@ -41,7 +54,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   text: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: '700',
   },

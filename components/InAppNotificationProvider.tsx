@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/Themed';
-import Colors, { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import {
   registerNotificationHandlers,
@@ -168,8 +168,8 @@ export default function InAppNotificationProvider({ children }: { children: Reac
             ]}
             accessibilityRole="button"
             accessibilityLabel={`${push.title}. ${push.body}`}>
-            <RNView style={[styles.pushIcon, { backgroundColor: Pokemon.red }]}>
-              <Text style={styles.pushIconText}>✉</Text>
+            <RNView style={[styles.pushIcon, { backgroundColor: theme.action }]}>
+              <Text style={[styles.pushIconText, { color: theme.actionText }]}>✉</Text>
             </RNView>
             <RNView style={styles.pushText}>
               <Text style={styles.pushTitle} numberOfLines={1}>
@@ -234,7 +234,6 @@ const styles = StyleSheet.create({
     width: 36,
   },
   pushIconText: {
-    color: '#fff',
     fontSize: 16,
   },
   pushText: {

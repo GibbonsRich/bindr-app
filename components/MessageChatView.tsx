@@ -12,9 +12,9 @@ import {
 
 import DeleteThreadButton from '@/components/DeleteThreadButton';
 import AppHeading from '@/components/AppHeading';
-import NotificationButton from '@/components/NotificationButton';
+import DarkModeToggle from '@/components/DarkModeToggle';
 import { Text, View } from '@/components/Themed';
-import Colors, { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useMessages } from '@/hooks/useMessages';
 import { formatChatTime, threadKey } from '@/lib/messages';
@@ -74,7 +74,7 @@ export default function MessageChatView({ thread, onBack, onDelete }: Props) {
   if (!ready) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Pokemon.red} />
+        <ActivityIndicator size="large" color={theme.spinner} />
       </View>
     );
   }
@@ -90,7 +90,7 @@ export default function MessageChatView({ thread, onBack, onDelete }: Props) {
         <View style={styles.header} lightColor={theme.surface} darkColor={theme.surface}>
           <View style={styles.headerRow} lightColor="transparent" darkColor="transparent">
             <Pressable onPress={onBack} style={styles.backLink}>
-              <Text style={styles.backLinkText}>← Messages</Text>
+              <Text style={[styles.backLinkText, { color: theme.link }]}>← Messages</Text>
             </Pressable>
             <View style={styles.headerActions} lightColor="transparent" darkColor="transparent">
               {onDelete ? (
@@ -99,7 +99,7 @@ export default function MessageChatView({ thread, onBack, onDelete }: Props) {
                   accessibilityLabel={`Delete chat with ${liveThread.collectorName}`}
                 />
               ) : null}
-              <NotificationButton />
+              <DarkModeToggle />
             </View>
           </View>
           <AppHeading style={styles.headerName}>{liveThread.collectorName}</AppHeading>
@@ -120,11 +120,18 @@ export default function MessageChatView({ thread, onBack, onDelete }: Props) {
             typing ? <TypingBubble collectorName={liveThread.collectorName} /> : null
           }
           renderItem={({ item }) => (
-            <ChatBubble message={item} isMine={item.direction === 'outbound'} />
+            <ChatBubble
+              message={item}
+              isMine={item.direction === 'outbound'}
+              theme={theme}
+            />
           )}
         />
 
-        <View style={styles.composer} lightColor={theme.surface} darkColor={theme.surface}>
+        <View
+          style={[styles.composer, { borderTopColor: theme.border }]}
+          lightColor={theme.surface}
+          darkColor={theme.surface}>
           <TextInput
             value={draft}
             onChangeText={setDraft}
@@ -144,10 +151,16 @@ export default function MessageChatView({ thread, onBack, onDelete }: Props) {
             maxLength={500}
           />
           <Pressable
-            style={[styles.sendButton, (!draft.trim() || sending) && styles.sendDisabled]}
+            style={[
+              styles.sendButton,
+              { backgroundColor: theme.action },
+              (!draft.trim() || sending) && styles.sendDisabled,
+            ]}
             onPress={handleSend}
             disabled={!draft.trim() || sending}>
-            <Text style={styles.sendText}>{sending ? '…' : 'Send'}</Text>
+            <Text style={[styles.sendText, { color: theme.actionText }]}>
+              {sending ? '…' : 'Send'}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -168,17 +181,35 @@ function TypingBubble({ collectorName }: { collectorName: string }) {
   );
 }
 
-function ChatBubble({ message, isMine }: { message: TradeMessage; isMine: boolean }) {
+function ChatBubble({
+  message,
+  isMine,
+  theme,
+}: {
+  message: TradeMessage;
+  isMine: boolean;
+  theme: (typeof Colors)['light'];
+}) {
   return (
     <View
       style={[styles.bubbleRow, isMine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}
       pointerEvents="none">
       <View
         style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}
-        lightColor={isMine ? Pokemon.blue : Colors.light.surfaceAlt}
-        darkColor={isMine ? Pokemon.blue : Colors.dark.surfaceAlt}>
-        <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>{message.body}</Text>
-        <Text style={[styles.bubbleTime, isMine && styles.bubbleTimeMine]}>
+        lightColor={isMine ? Colors.light.bubbleMine : Colors.light.surfaceAlt}
+        darkColor={isMine ? Colors.dark.bubbleMine : Colors.dark.surfaceAlt}>
+        <Text
+          style={[
+            styles.bubbleText,
+            isMine && { color: theme.bubbleMineText },
+          ]}>
+          {message.body}
+        </Text>
+        <Text
+          style={[
+            styles.bubbleTime,
+            isMine && { color: theme.bubbleMineText, opacity: 0.7 },
+          ]}>
           {formatChatTime(message.createdAt)}
         </Text>
       </View>
@@ -217,7 +248,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   backLinkText: {
-    color: Pokemon.blue,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -270,22 +300,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 21,
   },
-  bubbleTextMine: {
-    color: '#fff',
-  },
   bubbleTime: {
     fontSize: 10,
     marginTop: 6,
     opacity: 0.55,
     textAlign: 'right',
   },
-  bubbleTimeMine: {
-    color: 'rgba(255,255,255,0.85)',
-    opacity: 1,
-  },
   composer: {
     alignItems: 'flex-end',
-    borderTopColor: 'rgba(0,0,0,0.06)',
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 10,
@@ -303,7 +325,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   sendButton: {
-    backgroundColor: Pokemon.red,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -312,7 +333,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendText: {
-    color: '#fff',
     fontWeight: '700',
   },
 });

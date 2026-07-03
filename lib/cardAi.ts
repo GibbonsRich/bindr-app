@@ -1,4 +1,5 @@
 import type { CardCondition, ScanResult } from '@/types/card';
+import { gradeFor } from '@/lib/cardGrade';
 
 const MOCK_CARDS = [
   { name: 'Charizard', set: 'Base Set', number: '4/102', rarity: 'Holo Rare', value: 320 },
@@ -13,32 +14,6 @@ const CONDITIONS: CardCondition[] = ['Mint', 'Near Mint', 'Excellent', 'Good', '
 
 function randomFrom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
-}
-
-function gradeFor(condition: CardCondition) {
-  const base = {
-    Mint: 9.8,
-    'Near Mint': 8.5,
-    Excellent: 7.2,
-    Good: 5.5,
-    Played: 3.8,
-    Poor: 2.0,
-  }[condition];
-
-  const jitter = () => Math.round((base + (Math.random() - 0.5) * 0.8) * 10) / 10;
-
-  return {
-    overall: condition,
-    centering: jitter(),
-    corners: jitter(),
-    edges: jitter(),
-    surface: jitter(),
-    notes: [
-      'Demo scan — sample data for prototyping',
-      'Centering slightly left-heavy',
-      'Minor holo surface scuff visible under light',
-    ],
-  };
 }
 
 function estimateValue(base: number, condition: CardCondition): number {

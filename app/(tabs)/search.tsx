@@ -124,7 +124,7 @@ export default function SearchScreen() {
                 <Pressable
                   style={[
                     styles.addButton,
-                    onWishlist && styles.addButtonDone,
+                    { backgroundColor: onWishlist ? theme.actionMuted : theme.action },
                     adding && styles.disabled,
                   ]}
                   onPress={() => handleAddToWishlist(item)}
@@ -133,7 +133,13 @@ export default function SearchScreen() {
                   accessibilityLabel={
                     onWishlist ? `${item.name} already on wishlist` : `Add ${item.name} to wishlist`
                   }>
-                  <Text style={[styles.addButtonText, onWishlist && styles.addButtonTextDone]}>
+                  <Text
+                    style={[
+                      styles.addButtonText,
+                      {
+                        color: onWishlist ? theme.actionMutedText : theme.actionText,
+                      },
+                    ]}>
                     {onWishlist ? 'Added' : adding ? '…' : 'Add'}
                   </Text>
                 </Pressable>

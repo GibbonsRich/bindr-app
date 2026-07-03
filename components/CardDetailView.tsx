@@ -1,10 +1,14 @@
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import AppHeading from '@/components/AppHeading';
+import CardGradePanel from '@/components/CardGradePanel';
 import CardImage from '@/components/CardImage';
+import CardPriceChart from '@/components/CardPriceChart';
 import ConditionBadge from '@/components/ConditionBadge';
 import { Text, View } from '@/components/Themed';
-import Colors, { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { getCardGrade } from '@/lib/cardGrade';
 import { formatSaleDate, type CardMarketData } from '@/lib/cardMarket';
 import type { CardCondition, PokemonCard } from '@/types/card';
 
@@ -25,11 +29,15 @@ export default function CardDetailView({
   onBack,
   headerRight,
 }: Props) {
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
+  const grade = getCardGrade(card);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topRow} lightColor="transparent" darkColor="transparent">
         <Pressable onPress={onBack} style={styles.backLink}>
-          <Text style={styles.backLinkText}>{backLabel}</Text>
+          <Text style={[styles.backLinkText, { color: theme.link }]}>{backLabel}</Text>
         </Pressable>
         {headerRight}
       </View>
@@ -39,19 +47,20 @@ export default function CardDetailView({
         {card.set} · #{card.number} · {card.rarity}
       </Text>
 
-      <View style={styles.yourCopy} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
-        <Text style={styles.yourCopyLabel}>Your copy</Text>
-        <View style={styles.yourCopyRow} lightColor="transparent" darkColor="transparent">
-          <ConditionBadge condition={card.condition} />
-          <Text style={styles.yourCopyValue}>{formatMoney(card.estimatedValue)}</Text>
-          {card.quantity > 1 ? <Text style={styles.qty}>×{card.quantity}</Text> : null}
-        </View>
-      </View>
-
-      <AppHeading style={styles.sectionTitle}>Your photos</AppHeading>
       <View style={styles.photoRow} lightColor="transparent" darkColor="transparent">
         <PhotoSlot label="Front" card={card} variant="front" />
         <PhotoSlot label="Back" card={card} variant="back" />
+      </View>
+
+      <CardPriceChart card={card} formatMoney={formatMoney} />
+
+      <AppHeading style={styles.sectionTitle}>Condition grade</AppHeading>
+      <View style={styles.gradePanel} lightColor={Colors.light.surface} darkColor={Colors.dark.surface}>
+        <View style={styles.gradeHeader} lightColor="transparent" darkColor="transparent">
+          <ConditionBadge condition={card.condition} />
+          {!card.grade ? <Text style={styles.estimatedTag}>Estimated from condition</Text> : null}
+        </View>
+        <CardGradePanel grade={grade} />
       </View>
 
       <AppHeading style={styles.sectionTitle}>Average sold price by condition</AppHeading>
@@ -112,6 +121,9 @@ function ConditionPriceRow({
   price: string;
   highlight: boolean;
 }) {
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
+
   return (
     <View
       style={[styles.tableRow, highlight && styles.tableRowHighlight]}
@@ -119,7 +131,7 @@ function ConditionPriceRow({
       darkColor={highlight ? Colors.dark.surfaceAlt : 'transparent'}>
       <ConditionBadge condition={condition} />
       <Text style={styles.tablePrice}>{price}</Text>
-      {highlight ? <Text style={styles.yoursTag}>Yours</Text> : null}
+      {highlight ? <Text style={[styles.yoursTag, { color: theme.link }]}>Yours</Text> : null}
     </View>
   );
 }
@@ -140,42 +152,32 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   backLinkText: {
-    color: Pokemon.blue,
     fontSize: 15,
     fontWeight: '700',
   },
   title: {
     marginBottom: 0,
+    marginTop: 4,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 21,
     marginTop: 6,
-    opacity: 0.7,
+    opacity: 0.88,
   },
-  yourCopy: {
-    borderRadius: 14,
-    marginTop: 16,
+  gradePanel: {
+    borderRadius: 16,
     padding: 14,
   },
-  yourCopyLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    opacity: 0.6,
-  },
-  yourCopyRow: {
+  gradeHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 10,
-    marginTop: 8,
   },
-  yourCopyValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    marginLeft: 'auto',
-  },
-  qty: {
-    fontSize: 14,
-    opacity: 0.7,
+  estimatedTag: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    opacity: 0.65,
   },
   sectionTitle: {
     marginBottom: 10,
@@ -184,6 +186,7 @@ const styles = StyleSheet.create({
   photoRow: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 18,
   },
   photoSlot: {
     alignItems: 'center',
@@ -218,7 +221,6 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   yoursTag: {
-    color: Pokemon.blue,
     fontSize: 11,
     fontWeight: '700',
   },

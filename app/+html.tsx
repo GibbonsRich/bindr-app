@@ -28,12 +28,11 @@ export default function Root({ children }: { children: ReactNode }) {
   );
 }
 
+import { Pokemon } from '@/constants/Colors';
+
 const responsiveBackground = `
 body {
-  background-color: #fff;
+  background-color: ${Pokemon.cream};
+  color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #000;
-  }
-}`;
+`;

@@ -395,6 +395,11 @@ export async function deleteThreadMessages(
   return updated;
 }
 
+export async function clearAllMessages(): Promise<TradeMessage[]> {
+  await saveMessages([]);
+  return [];
+}
+
 export async function markAllMessagesRead(): Promise<TradeMessage[]> {
   const messages = await loadMessages();
   const updated = messages.map((message) => ({ ...message, read: true }));

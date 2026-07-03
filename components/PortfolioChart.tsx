@@ -4,7 +4,7 @@ import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { Text, View } from '@/components/Themed';
 import CurrencyPicker from '@/components/CurrencyPicker';
-import Colors, { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import type { CurrencyCode } from '@/lib/currency';
 import {
@@ -43,9 +43,9 @@ export default function PortfolioChart({
   );
 
   const { delta, percent } = useMemo(() => getPeriodChange(points), [points]);
-  const isUp = delta >= 0;
-  const lineColor = isUp ? Pokemon.gbLight : Pokemon.red;
   const theme = Colors[scheme];
+  const isUp = delta >= 0;
+  const lineColor = isUp ? theme.chartUp : theme.chartDown;
 
   const { linePath, areaPath } = useMemo(() => {
     if (width <= 0 || points.length < 2) {
@@ -110,8 +110,17 @@ export default function PortfolioChart({
             <Pressable
               key={option.key}
               onPress={() => setRange(option.key)}
-              style={[styles.rangeChip, active && styles.rangeChipActive]}>
-              <Text style={[styles.rangeText, active && styles.rangeTextActive]}>{option.label}</Text>
+              style={[
+                styles.rangeChip,
+                active && { backgroundColor: theme.action },
+              ]}>
+              <Text
+                style={[
+                  styles.rangeText,
+                  active && { color: theme.actionText, opacity: 1 },
+                ]}>
+                {option.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -164,17 +173,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  rangeChipActive: {
-    backgroundColor: Pokemon.blue,
-  },
   rangeText: {
     fontSize: 12,
     fontWeight: '700',
     opacity: 0.65,
     textAlign: 'center',
-  },
-  rangeTextActive: {
-    color: '#fff',
-    opacity: 1,
   },
 });

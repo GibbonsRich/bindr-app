@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import AppHeading from '@/components/AppHeading';
-import NotificationButton from '@/components/NotificationButton';
+import HeaderActions from '@/components/HeaderActions';
 import { Text, View } from '@/components/Themed';
 
 type Props = {
@@ -15,7 +15,7 @@ export default function PageHeader({ title, description, tagline }: Props) {
     <View style={styles.wrapper} lightColor="transparent" darkColor="transparent">
       <View style={styles.titleRow} lightColor="transparent" darkColor="transparent">
         <AppHeading style={styles.title}>{title}</AppHeading>
-        <NotificationButton />
+        <HeaderActions />
       </View>
       {tagline ? <Text style={styles.tagline}>{tagline}</Text> : null}
       <Text style={styles.description}>{description}</Text>

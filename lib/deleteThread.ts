@@ -12,3 +12,13 @@ export function confirmDeleteThread(
     onConfirm
   );
 }
+
+export function confirmDeleteAllMessages(threadCount: number, onConfirm: () => void) {
+  const label = threadCount === 1 ? 'conversation' : 'conversations';
+  confirmAction(
+    'Delete all messages',
+    `Delete all ${threadCount} ${label}? This cannot be undone.`,
+    'Delete all',
+    onConfirm
+  );
+}

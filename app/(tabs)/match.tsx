@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View as RNView } from 'react-native';
 
+import Accordion from '@/components/Accordion';
 import AppHeading from '@/components/AppHeading';
 import CardImage from '@/components/CardImage';
 import ConditionBadge from '@/components/ConditionBadge';
@@ -10,6 +11,7 @@ import ScreenNotifications from '@/components/ScreenNotifications';
 import TradeMessageModal from '@/components/TradeMessageModal';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { confirmAction, pickFromList } from '@/lib/alert';
 import { findMatchesForWishlist } from '@/lib/collectors';
 import { loadWishlist, removeFromWishlist } from '@/lib/storage';
@@ -25,6 +27,8 @@ import type { CollectorListing, WishlistItem } from '@/types/card';
 const RADIUS_OPTIONS = [5, 10, 25, 50];
 
 export default function MatchScreen() {
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
   const { formatMoney } = useCurrency();
   const { sendTradeMessage } = useMessages();
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
@@ -113,7 +117,7 @@ export default function MatchScreen() {
     return (
       <ScreenNotifications>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Pokemon.red} />
+          <ActivityIndicator size="large" color={theme.spinner} />
         </View>
       </ScreenNotifications>
     );
@@ -129,26 +133,37 @@ export default function MatchScreen() {
       <RNView style={styles.locationRow}>
         <Text style={styles.location}>{locationLabel}</Text>
         <Pressable onPress={changeLocation} hitSlop={8} accessibilityRole="button">
-          <Text style={styles.changeLocation}>change location</Text>
+          <Text style={[styles.changeLocation, { color: theme.link }]}>change location</Text>
         </Pressable>
       </RNView>
 
       <View style={styles.radiusRow}>
-        {RADIUS_OPTIONS.map((option) => (
+        {RADIUS_OPTIONS.map((option) => {
+          const active = radius === option;
+          return (
           <Pressable
             key={option}
-            style={[styles.radiusChip, radius === option && styles.radiusChipActive]}
+            style={[
+              styles.radiusChip,
+              { borderColor: theme.action },
+              active && { backgroundColor: theme.action },
+            ]}
             onPress={() => setRadius(option)}>
             <Text
-              style={[styles.radiusText, radius === option && styles.radiusTextActive]}>
+              style={[
+                styles.radiusText,
+                { color: theme.action },
+                active && { color: theme.actionText },
+              ]}>
               {option} mi
             </Text>
           </Pressable>
-        ))}
+          );
+        })}
       </View>
 
       <View style={styles.wishlistSection}>
-        <AppHeading style={styles.sectionTitle}>Your wishlist</AppHeading>
+      <Accordion title="Your wishlist" count={wishlist.length} defaultOpen={false}>
         {wishlist.length === 0 ? (
           <View style={styles.wishlistEmpty} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
             <Text style={styles.wishlistEmptyText}>
@@ -171,11 +186,12 @@ export default function MatchScreen() {
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${item.name} from wishlist`}>
-                <Text style={styles.remove}>Remove</Text>
+                <Text style={[styles.remove, { color: theme.link }]}>Remove</Text>
               </Pressable>
             </View>
           ))
         )}
+      </Accordion>
       </View>
 
       <AppHeading style={styles.sectionTitle}>
@@ -192,51 +208,72 @@ export default function MatchScreen() {
       ) : (
         grouped.map(([key, listings]) => {
           const [cardName, setName] = key.split('|');
+          const prices = listings.map((listing) => listing.askingPrice);
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          const priceRange =
+            minPrice === maxPrice
+              ? formatMoney(minPrice)
+              : `${formatMoney(minPrice)} – ${formatMoney(maxPrice)}`;
+
           return (
             <View key={key} style={styles.matchGroup} lightColor={Colors.light.surface} darkColor={Colors.dark.surface}>
-              <View style={styles.matchHeader} lightColor="transparent" darkColor="transparent">
-                <CardImage name={cardName} set={setName} size="md" />
-                <View style={styles.matchHeaderText} lightColor="transparent" darkColor="transparent">
-                  <AppHeading style={styles.matchCardName}>{cardName}</AppHeading>
-                  <Text style={styles.matchSet}>{setName}</Text>
-                </View>
-              </View>
-              {listings.map((listing, index) => (
-                <View
-                  key={`${listing.collectorId}-${index}`}
-                  style={styles.listingRow}
-                  lightColor="transparent"
-                  darkColor="transparent">
-                  <View style={styles.listingMeta}>
-                    <Text style={styles.collectorName}>{listing.collectorName}</Text>
-                    <Text style={styles.distance}>{listing.distanceMiles} mi away</Text>
-                  </View>
-                  <View style={styles.listingFooter}>
-                    <ConditionBadge condition={listing.condition} />
-                    <Text style={styles.price}>{formatMoney(listing.askingPrice)}</Text>
-                  </View>
-                  <Pressable
-                    style={[
-                      styles.messageButton,
-                      sentKeys.has(`${listing.collectorId}|${listing.cardName}|${listing.set}`) &&
-                        styles.messageButtonSent,
-                    ]}
-                    onPress={() => setMessageTarget(listing)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Message ${listing.collectorName} about a trade`}>
-                    <Text
+              <Accordion
+                title={cardName}
+                subtitle={setName}
+                count={listings.length}
+                defaultOpen={false}
+                leading={<CardImage name={cardName} set={setName} size="sm" />}
+                headerTrailing={
+                  <Text style={styles.priceRange} numberOfLines={2}>
+                    {priceRange}
+                  </Text>
+                }>
+                {listings.map((listing, index) => {
+                  const sent = sentKeys.has(
+                    `${listing.collectorId}|${listing.cardName}|${listing.set}`
+                  );
+
+                  return (
+                    <View
+                      key={`${listing.collectorId}-${index}`}
                       style={[
-                        styles.messageButtonText,
-                        sentKeys.has(`${listing.collectorId}|${listing.cardName}|${listing.set}`) &&
-                          styles.messageButtonTextSent,
-                      ]}>
-                      {sentKeys.has(`${listing.collectorId}|${listing.cardName}|${listing.set}`)
-                        ? 'Message sent'
-                        : 'Message about trade'}
-                    </Text>
-                  </Pressable>
-                </View>
-              ))}
+                        styles.listingRow,
+                        index > 0 && { borderTopColor: theme.border, ...styles.listingRowDivider },
+                      ]}
+                      lightColor="transparent"
+                      darkColor="transparent">
+                      <View style={styles.listingMeta}>
+                        <Text style={styles.collectorName}>{listing.collectorName}</Text>
+                        <Text style={styles.distance}>{listing.distanceMiles} mi away</Text>
+                      </View>
+                      <View style={styles.listingFooter}>
+                        <ConditionBadge condition={listing.condition} />
+                        <Text style={styles.price}>{formatMoney(listing.askingPrice)}</Text>
+                        <Pressable
+                          style={[
+                            styles.messageButton,
+                            {
+                              backgroundColor: sent ? theme.actionMuted : theme.action,
+                              borderColor: sent ? theme.border : 'transparent',
+                            },
+                          ]}
+                          onPress={() => setMessageTarget(listing)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Message ${listing.collectorName} about a trade`}>
+                          <Text
+                            style={[
+                              styles.messageButtonText,
+                              { color: sent ? theme.actionMutedText : theme.actionText },
+                            ]}>
+                            {sent ? 'Sent' : 'Message'}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </Accordion>
             </View>
           );
         })
@@ -347,73 +384,60 @@ const styles = StyleSheet.create({
   },
   matchGroup: {
     borderRadius: 16,
-    marginBottom: 12,
+    marginBottom: 10,
     padding: 14,
   },
-  matchHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 10,
-  },
-  matchHeaderText: {
-    flex: 1,
-  },
-  matchCardName: {
-    marginBottom: 0,
-  },
-  matchSet: {
-    fontSize: 13,
-    opacity: 0.6,
+  priceRange: {
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'right',
   },
   listingRow: {
-    borderTopColor: 'rgba(0,0,0,0.06)',
+    paddingTop: 0,
+  },
+  listingRowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 10,
-    marginTop: 10,
+    marginTop: 12,
+    paddingTop: 12,
   },
   listingMeta: {
     backgroundColor: 'transparent',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
   collectorName: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   distance: {
     fontSize: 12,
-    opacity: 0.6,
+    opacity: 0.55,
   },
   listingFooter: {
     alignItems: 'center',
     backgroundColor: 'transparent',
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
+    gap: 8,
   },
   price: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginLeft: 'auto',
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'right',
   },
   messageButton: {
     alignItems: 'center',
-    backgroundColor: Pokemon.blue,
-    borderRadius: 10,
-    marginTop: 10,
-    paddingVertical: 10,
-  },
-  messageButtonSent: {
-    backgroundColor: Pokemon.gbLight,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
+    minWidth: 76,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   messageButtonText: {
-    color: '#fff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-  },
-  messageButtonTextSent: {
-    color: Pokemon.gbDark,
   },
   empty: {
     borderRadius: 16,

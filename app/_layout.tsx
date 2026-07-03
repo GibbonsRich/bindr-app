@@ -1,6 +1,7 @@
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
@@ -8,6 +9,7 @@ import InAppNotificationProvider from '@/components/InAppNotificationProvider';
 import { useColorScheme } from '@/components/useColorScheme';
 import { CurrencyProvider } from '@/hooks/useCurrency';
 import { MessagesProvider } from '@/hooks/useMessages';
+import { ThemePreferenceProvider } from '@/hooks/useThemePreference';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -42,7 +44,11 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <ThemePreferenceProvider>
+      <RootLayoutNav />
+    </ThemePreferenceProvider>
+  );
 }
 
 function RootLayoutNav() {
@@ -53,12 +59,13 @@ function RootLayoutNav() {
       <CurrencyProvider>
         <MessagesProvider>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="portfolio/[id]" options={{ headerShown: false }} />
-            <Stack.Screen name="messages" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
-          </Stack>
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="portfolio/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="messages" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+            </Stack>
           </ThemeProvider>
         </MessagesProvider>
       </CurrencyProvider>

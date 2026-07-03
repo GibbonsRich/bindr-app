@@ -11,15 +11,16 @@ const TAB_BAR_HEIGHT = 64;
 const TAB_BAR_FLOAT = 16;
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
   const insets = useSafeAreaInsets();
   const bottomOffset = Math.max(insets.bottom, 12) + TAB_BAR_FLOAT;
+  const theme = Colors[colorScheme];
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
-        tabBarInactiveTintColor: Colors[colorScheme].tabIconDefault,
+        tabBarActiveTintColor: theme.tint,
+        tabBarInactiveTintColor: theme.tabIconDefault,
         tabBarBackground: () => <GlassTabBarBackground />,
         tabBarStyle: {
           position: 'absolute',
@@ -46,6 +47,7 @@ export default function TabLayout() {
           marginBottom: 4,
         },
         sceneStyle: {
+          backgroundColor: theme.background,
           paddingBottom: bottomOffset + TAB_BAR_HEIGHT + 12,
         },
         headerShown: false,

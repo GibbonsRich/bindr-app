@@ -14,8 +14,8 @@ export default function GlassTabBarBackground() {
           StyleSheet.absoluteFill,
           styles.rounded,
           {
-            backgroundColor: isDark ? 'rgba(15, 56, 15, 0.78)' : 'rgba(255, 248, 231, 0.82)',
-            borderColor: isDark ? 'rgba(155, 188, 15, 0.4)' : 'rgba(59, 76, 202, 0.28)',
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.82)' : 'rgba(255, 248, 231, 0.82)',
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(59, 76, 202, 0.28)',
           },
         ]}
       />

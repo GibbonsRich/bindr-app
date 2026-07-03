@@ -1,10 +1,10 @@
 import type { TextProps, TextStyle } from 'react-native';
 
 import { Text } from '@/components/Themed';
-import { Pokemon } from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
 
 export const appHeadingStyle: TextStyle = {
-  color: Pokemon.red,
   fontSize: 32,
   fontWeight: '800',
   letterSpacing: -0.5,
@@ -15,8 +15,11 @@ type Props = TextProps & {
 };
 
 export default function AppHeading({ style, children, ...props }: Props) {
+  const scheme = useColorScheme();
+  const theme = Colors[scheme];
+
   return (
-    <Text style={[appHeadingStyle, style]} {...props}>
+    <Text style={[appHeadingStyle, { color: theme.heading }, style]} {...props}>
       {children}
     </Text>
   );

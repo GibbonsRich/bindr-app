@@ -31,6 +31,8 @@ import {
 
   deleteThreadMessages,
 
+  clearAllMessages,
+
   FAKE_REPLY_DELAY_MS,
 
   getUnreadCount,
@@ -94,6 +96,8 @@ type MessagesContextValue = {
   markThreadAsRead: (collectorId: string, cardName: string, set: string) => Promise<void>;
 
   deleteThread: (collectorId: string, cardName: string, set: string) => Promise<void>;
+
+  deleteAllMessages: () => Promise<void>;
 
   isThreadTyping: (collectorId: string, cardName: string, set: string) => boolean;
 
@@ -311,6 +315,18 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
 
 
 
+  const cancelAllPendingReplies = useCallback(() => {
+
+    replyTimers.current.forEach(clearTimeout);
+
+    replyTimers.current.clear();
+
+    setTypingThreadKeys(new Set());
+
+  }, []);
+
+
+
   const deleteThread = useCallback(
 
     async (collectorId: string, cardName: string, set: string) => {
@@ -326,6 +342,18 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
     [cancelPendingReply]
 
   );
+
+
+
+  const deleteAllMessages = useCallback(async () => {
+
+    cancelAllPendingReplies();
+
+    const updated = await clearAllMessages();
+
+    setMessages(updated);
+
+  }, [cancelAllPendingReplies]);
 
 
 
@@ -371,6 +399,8 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
 
       deleteThread,
 
+      deleteAllMessages,
+
       isThreadTyping,
 
     }),
@@ -396,6 +426,8 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
       markThreadAsRead,
 
       deleteThread,
+
+      deleteAllMessages,
 
       isThreadTyping,
 

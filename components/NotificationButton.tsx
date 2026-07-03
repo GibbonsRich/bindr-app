@@ -3,15 +3,15 @@ import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View as RNView } from 'react-native';
 
 import { Text } from '@/components/Themed';
-import Colors, { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useMessages } from '@/hooks/useMessages';
 
 export default function NotificationButton() {
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = useColorScheme();
+  const theme = Colors[scheme];
   const { unreadCount } = useMessages();
-  const tint = Colors[scheme].tint;
 
   return (
     <Pressable
@@ -27,12 +27,14 @@ export default function NotificationButton() {
           android: 'chat',
           web: 'chat',
         }}
-        tintColor={tint}
+        tintColor={theme.tint}
         size={24}
       />
       {unreadCount > 0 ? (
-        <RNView style={styles.badge}>
-          <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+        <RNView style={[styles.badge, { backgroundColor: theme.danger }]}>
+          <Text style={[styles.badgeText, { color: theme.dangerText }]}>
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </Text>
         </RNView>
       ) : null}
     </Pressable>
@@ -48,7 +50,6 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignItems: 'center',
-    backgroundColor: Pokemon.red,
     borderRadius: 999,
     justifyContent: 'center',
     minWidth: 18,
@@ -59,7 +60,6 @@ const styles = StyleSheet.create({
     top: 0,
   },
   badgeText: {
-    color: '#fff',
     fontSize: 10,
     fontWeight: '800',
   },

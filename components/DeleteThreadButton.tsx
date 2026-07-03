@@ -1,7 +1,8 @@
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet } from 'react-native';
 
-import { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 
 type Props = {
   onPress: () => void;
@@ -9,6 +10,9 @@ type Props = {
 };
 
 export default function DeleteThreadButton({ onPress, accessibilityLabel = 'Delete chat' }: Props) {
+  const scheme = useColorScheme();
+  const theme = Colors[scheme];
+
   return (
     <Pressable
       onPress={onPress}
@@ -21,7 +25,7 @@ export default function DeleteThreadButton({ onPress, accessibilityLabel = 'Dele
           android: 'delete',
           web: 'delete',
         }}
-        tintColor={Pokemon.red}
+        tintColor={theme.danger}
         size={22}
       />
     </Pressable>

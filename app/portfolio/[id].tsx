@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 
 import AppHeading from '@/components/AppHeading';
 import CardDetailView from '@/components/CardDetailView';
-import NotificationButton from '@/components/NotificationButton';
+import HeaderActions from '@/components/HeaderActions';
 import ScreenNotifications from '@/components/ScreenNotifications';
 import { Text, View } from '@/components/Themed';
 import { Pokemon } from '@/constants/Colors';
@@ -81,7 +81,7 @@ export default function PortfolioCardDetailScreen() {
       formatMoney={formatMoney}
       backLabel={backLabel}
       onBack={() => router.back()}
-      headerRight={<NotificationButton />}
+      headerRight={<HeaderActions />}
     />
   );
 }

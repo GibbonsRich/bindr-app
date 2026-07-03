@@ -10,12 +10,14 @@ import {
 } from 'react-native';
 
 import AppHeading from '@/components/AppHeading';
-import ConditionBadge from '@/components/ConditionBadge';
+import CardGradePanel from '@/components/CardGradePanel';
 import CardImage from '@/components/CardImage';
+import ConditionBadge from '@/components/ConditionBadge';
 import PageHeader from '@/components/PageHeader';
 import ScreenNotifications from '@/components/ScreenNotifications';
 import { Text, View } from '@/components/Themed';
-import Colors, { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { useCurrency } from '@/hooks/useCurrency';
 import { showAlert, showSuccess } from '@/lib/alert';
 import { analyzeCardImage, ScanAnalysisError } from '@/lib/cardAi';
@@ -27,6 +29,8 @@ type ScanSide = 'front' | 'back';
 
 export default function ScanScreen() {
   const router = useRouter();
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
   const { formatMoney } = useCurrency();
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -201,7 +205,7 @@ export default function ScanScreen() {
     return (
       <ScreenNotifications>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Pokemon.red} />
+          <ActivityIndicator size="large" color={theme.spinner} />
         </View>
       </ScreenNotifications>
     );
@@ -219,8 +223,12 @@ export default function ScanScreen() {
           <Text style={styles.permissionHint}>
             Allow camera access to scan the front and back of your cards.
           </Text>
-          <Pressable style={styles.primaryButton} onPress={requestPermission}>
-            <Text style={styles.primaryButtonText}>Grant permission</Text>
+          <Pressable
+            style={[styles.primaryButton, { backgroundColor: theme.action }]}
+            onPress={requestPermission}>
+            <Text style={[styles.primaryButtonText, { color: theme.actionText }]}>
+              Grant permission
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -275,19 +283,29 @@ export default function ScanScreen() {
 
       <View style={styles.scanActions}>
         <Pressable
-          style={[styles.primaryButton, styles.scanActionButton, scanDisabled && styles.disabled]}
+          style={[
+            styles.primaryButton,
+            styles.scanActionButton,
+            { backgroundColor: theme.action },
+            scanDisabled && styles.disabled,
+          ]}
           onPress={handleScanFront}
           disabled={scanDisabled}>
-          <Text style={styles.primaryButtonText}>
+          <Text style={[styles.primaryButtonText, { color: theme.actionText }]}>
             {scanning && scanSide === 'front' ? 'Scanning front…' : 'Scan front of card'}
           </Text>
         </Pressable>
 
         <Pressable
-          style={[styles.outlineButton, styles.scanActionButton, scanDisabled && styles.disabled]}
+          style={[
+            styles.outlineButton,
+            styles.scanActionButton,
+            { borderColor: theme.border },
+            scanDisabled && styles.disabled,
+          ]}
           onPress={handleScanBack}
           disabled={scanDisabled}>
-          <Text style={styles.outlineButtonText}>
+          <Text style={[styles.outlineButtonText, { color: theme.link }]}>
             {scanning && scanSide === 'back' ? 'Scanning back…' : 'Scan back of card'}
           </Text>
         </Pressable>
@@ -334,29 +352,22 @@ export default function ScanScreen() {
               </View>
 
               {result.card.grade ? (
-                <View style={styles.gradeGrid}>
-                  <GradeStat label="Centering" value={result.card.grade.centering} />
-                  <GradeStat label="Corners" value={result.card.grade.corners} />
-                  <GradeStat label="Edges" value={result.card.grade.edges} />
-                  <GradeStat label="Surface" value={result.card.grade.surface} />
-                </View>
+                <CardGradePanel grade={result.card.grade} />
               ) : null}
-
-              {result.card.grade?.notes.map((note) => (
-                <Text key={note} style={styles.note}>
-                  • {note}
-                </Text>
-              ))}
 
               <Text style={styles.tapHint}>Tap for full details →</Text>
             </View>
           </Pressable>
 
           <Pressable
-            style={[styles.secondaryButton, saving && styles.disabled]}
+            style={[
+              styles.secondaryButton,
+              { backgroundColor: theme.action },
+              saving && styles.disabled,
+            ]}
             onPress={handleAddToPortfolio}
             disabled={saving}>
-            <Text style={styles.secondaryButtonText}>
+            <Text style={[styles.secondaryButtonText, { color: theme.actionText }]}>
               {saving ? 'Saving…' : 'Add to portfolio'}
             </Text>
           </Pressable>
@@ -375,9 +386,15 @@ function ScanStatusChip({
   captured: boolean;
   active: boolean;
 }) {
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
+
   return (
     <View
-      style={[styles.statusChip, active && styles.statusChipActive, captured && styles.statusChipDone]}
+      style={[
+        styles.statusChip,
+        { borderColor: theme.border, borderWidth: captured || active ? 2 : 1 },
+      ]}
       lightColor={captured ? Colors.light.surfaceAlt : Colors.light.surface}
       darkColor={captured ? Colors.dark.surfaceAlt : Colors.dark.surface}>
       <Text style={styles.statusChipText}>
@@ -392,15 +409,6 @@ function MiniPhoto({ label, captured }: { label: string; captured: boolean }) {
     <View style={styles.miniPhoto} lightColor={Colors.light.surface} darkColor={Colors.dark.surface}>
       <Text style={styles.miniPhotoLabel}>{label}</Text>
       <Text style={styles.miniPhotoState}>{captured ? 'Captured' : 'Missing'}</Text>
-    </View>
-  );
-}
-
-function GradeStat({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.gradeStat} lightColor="transparent" darkColor="transparent">
-      <Text style={styles.gradeLabel}>{label}</Text>
-      <Text style={styles.gradeValue}>{value}</Text>
     </View>
   );
 }
@@ -449,17 +457,10 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     borderRadius: 999,
+    borderWidth: 1,
     flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
-  },
-  statusChipActive: {
-    borderColor: Pokemon.blue,
-    borderWidth: 2,
-  },
-  statusChipDone: {
-    borderColor: Pokemon.gbLight,
-    borderWidth: 1,
   },
   statusChipText: {
     fontSize: 13,
@@ -510,36 +511,30 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: Pokemon.red,
     borderRadius: 14,
     paddingVertical: 14,
   },
   primaryButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '700',
   },
   secondaryButton: {
     alignItems: 'center',
-    backgroundColor: Pokemon.blue,
     borderRadius: 12,
     marginTop: 12,
     paddingVertical: 12,
   },
   secondaryButtonText: {
-    color: '#fff',
     fontWeight: '700',
   },
   outlineButton: {
     alignItems: 'center',
-    borderColor: Pokemon.blue,
     borderRadius: 12,
     borderWidth: 2,
     marginTop: 12,
     paddingVertical: 12,
   },
   outlineButtonText: {
-    color: Pokemon.blue,
     fontWeight: '700',
   },
   disabled: {
@@ -613,33 +608,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 'auto',
   },
-  gradeGrid: {
-    backgroundColor: 'transparent',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 16,
-  },
-  gradeStat: {
-    minWidth: '42%',
-  },
-  gradeLabel: {
-    fontSize: 12,
-    opacity: 0.6,
-  },
-  gradeValue: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  note: {
-    fontSize: 13,
-    marginTop: 6,
-    opacity: 0.8,
-  },
   tapHint: {
-    color: Pokemon.blue,
     fontSize: 13,
     fontWeight: '700',
     marginTop: 14,
+    opacity: 0.85,
   },
 });

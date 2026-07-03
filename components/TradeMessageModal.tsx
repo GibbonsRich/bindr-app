@@ -10,7 +10,7 @@ import {
 
 import AppHeading from '@/components/AppHeading';
 import { Text, View } from '@/components/Themed';
-import Colors, { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { buildTradeMessage } from '@/lib/tradeMessage';
 import type { CollectorListing } from '@/types/card';
@@ -69,14 +69,20 @@ export default function TradeMessageModal({ listing, formatPrice, onClose, onSen
           </Text>
 
           <View style={styles.actions} lightColor="transparent" darkColor="transparent">
-            <Pressable style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelText}>Cancel</Text>
+            <Pressable
+              style={[styles.cancelButton, { borderColor: theme.border }]}
+              onPress={onClose}>
+              <Text style={[styles.cancelText, { color: theme.link }]}>Cancel</Text>
             </Pressable>
             <Pressable
-              style={[styles.sendButton, !message.trim() && styles.disabled]}
+              style={[
+                styles.sendButton,
+                { backgroundColor: theme.action },
+                !message.trim() && styles.disabled,
+              ]}
               onPress={() => onSend(listing, message.trim())}
               disabled={!message.trim()}>
-              <Text style={styles.sendText}>Send message</Text>
+              <Text style={[styles.sendText, { color: theme.actionText }]}>Send message</Text>
             </Pressable>
           </View>
         </View>
@@ -130,25 +136,21 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     alignItems: 'center',
-    borderColor: Pokemon.blue,
     borderRadius: 12,
     borderWidth: 2,
     flex: 1,
     paddingVertical: 12,
   },
   cancelText: {
-    color: Pokemon.blue,
     fontWeight: '700',
   },
   sendButton: {
     alignItems: 'center',
-    backgroundColor: Pokemon.red,
     borderRadius: 12,
     flex: 1,
     paddingVertical: 12,
   },
   sendText: {
-    color: '#fff',
     fontWeight: '700',
   },
   disabled: {

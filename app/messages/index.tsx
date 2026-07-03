@@ -11,12 +11,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import DeleteThreadButton from '@/components/DeleteThreadButton';
 import AppHeading from '@/components/AppHeading';
+import DarkModeToggle from '@/components/DarkModeToggle';
 import MessageChatView from '@/components/MessageChatView';
 import { Text, View } from '@/components/Themed';
-import Colors, { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useMessages } from '@/hooks/useMessages';
-import { confirmDeleteThread } from '@/lib/deleteThread';
+import { confirmDeleteAllMessages, confirmDeleteThread } from '@/lib/deleteThread';
 import { collectorInitials, formatInboxTime, threadKey } from '@/lib/messages';
 import type { MessageThread } from '@/types/message';
 
@@ -25,7 +26,7 @@ export default function MessagesInboxScreen() {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
   const theme = Colors[scheme];
-  const { threads, refreshMessages, unreadCount, deleteThread } = useMessages();
+  const { threads, refreshMessages, unreadCount, deleteThread, deleteAllMessages } = useMessages();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   useFocusEffect(
@@ -60,6 +61,13 @@ export default function MessagesInboxScreen() {
     });
   }
 
+  function handleDeleteAll() {
+    confirmDeleteAllMessages(threads.length, () => {
+      setSelectedKey(null);
+      void deleteAllMessages();
+    });
+  }
+
   return (
     <RNView
       style={[
@@ -76,9 +84,23 @@ export default function MessagesInboxScreen() {
         <View style={styles.screen} lightColor={theme.background} darkColor={theme.background}>
           <View style={styles.header} lightColor={theme.surface} darkColor={theme.surface}>
             <Pressable onPress={() => router.back()} style={styles.backLink}>
-              <Text style={styles.backLinkText}>← Back</Text>
+              <Text style={[styles.backLinkText, { color: theme.link }]}>← Back</Text>
             </Pressable>
-            <AppHeading style={styles.headerTitle}>Messages</AppHeading>
+            <View style={styles.headerTop} lightColor="transparent" darkColor="transparent">
+              <AppHeading style={styles.headerTitle}>Messages</AppHeading>
+              <RNView style={styles.headerRight}>
+                <DarkModeToggle />
+                {threads.length > 0 ? (
+                  <Pressable
+                    onPress={handleDeleteAll}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete all messages">
+                    <Text style={[styles.deleteAll, { color: theme.link }]}>Delete all</Text>
+                  </Pressable>
+                ) : null}
+              </RNView>
+            </View>
             {unreadCount > 0 ? (
               <Text style={styles.unreadSummary}>
                 {unreadCount} unread notification{unreadCount === 1 ? '' : 's'}
@@ -134,6 +156,8 @@ function SmsThreadRow({
   onPress: () => void;
   onDelete: () => void;
 }) {
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
   const unread = thread.unreadCount > 0;
   const previewPrefix = thread.lastMessage.direction === 'outbound' ? 'You: ' : '';
 
@@ -147,9 +171,14 @@ function SmsThreadRow({
         accessibilityLabel={`Open chat with ${thread.collectorName}`}>
         <RNView pointerEvents="none" style={styles.row}>
           <View style={styles.avatarWrap} lightColor="transparent" darkColor="transparent">
-            {unread ? <RNView style={styles.unreadDot} /> : null}
-            <View style={styles.avatar} lightColor={Pokemon.blue} darkColor={Pokemon.blue}>
-              <Text style={styles.avatarText}>{collectorInitials(thread.collectorName)}</Text>
+            {unread ? <RNView style={[styles.unreadDot, { backgroundColor: theme.danger }]} /> : null}
+            <View
+              style={styles.avatar}
+              lightColor={Colors.light.avatar}
+              darkColor={Colors.dark.avatar}>
+              <Text style={[styles.avatarText, { color: Colors[scheme].avatarText }]}>
+                {collectorInitials(thread.collectorName)}
+              </Text>
             </View>
           </View>
 
@@ -158,7 +187,7 @@ function SmsThreadRow({
               <Text style={[styles.rowName, unread && styles.rowNameUnread]} numberOfLines={1}>
                 {thread.collectorName}
               </Text>
-              <Text style={[styles.rowTime, unread && styles.rowTimeUnread]}>
+              <Text style={[styles.rowTime, unread && { color: theme.link, fontWeight: '700', opacity: 1 }]}>
                 {formatInboxTime(thread.lastMessage.createdAt)}
               </Text>
             </View>
@@ -173,8 +202,8 @@ function SmsThreadRow({
                 {thread.lastMessage.body}
               </Text>
               {unread ? (
-                <RNView style={styles.unreadBadge}>
-                  <Text style={styles.unreadBadgeText}>{thread.unreadCount}</Text>
+                <RNView style={[styles.unreadBadge, { backgroundColor: theme.danger }]}>
+                  <Text style={[styles.unreadBadgeText, { color: theme.dangerText }]}>{thread.unreadCount}</Text>
                 </RNView>
               ) : null}
             </RNView>
@@ -208,12 +237,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   backLinkText: {
-    color: Pokemon.blue,
     fontSize: 15,
     fontWeight: '700',
   },
   headerTitle: {
+    flex: 1,
     marginBottom: 0,
+  },
+  headerTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  headerRight: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  deleteAll: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   unreadSummary: {
     fontSize: 13,
@@ -248,7 +291,6 @@ const styles = StyleSheet.create({
     width: 52,
   },
   unreadDot: {
-    backgroundColor: Pokemon.red,
     borderRadius: 999,
     height: 10,
     left: 0,
@@ -265,7 +307,6 @@ const styles = StyleSheet.create({
     width: 48,
   },
   avatarText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '800',
   },
@@ -290,9 +331,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   rowTimeUnread: {
-    color: Pokemon.blue,
     fontWeight: '700',
-    opacity: 1,
   },
   rowMeta: {
     fontSize: 12,
@@ -317,7 +356,6 @@ const styles = StyleSheet.create({
   },
   unreadBadge: {
     alignItems: 'center',
-    backgroundColor: Pokemon.red,
     borderRadius: 999,
     justifyContent: 'center',
     minWidth: 22,
@@ -325,7 +363,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   unreadBadgeText: {
-    color: '#fff',
     fontSize: 11,
     fontWeight: '800',
   },

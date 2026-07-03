@@ -6,11 +6,14 @@ import AppHeading from '@/components/AppHeading';
 import CurrencyPicker from '@/components/CurrencyPicker';
 import PageHeader from '@/components/PageHeader';
 import { Text, View } from '@/components/Themed';
-import Colors, { Pokemon } from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
 import { useCurrency } from '@/hooks/useCurrency';
 import { loadPortfolio, loadWishlist } from '@/lib/storage';
 
 export default function ProfileScreen() {
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
   const { currency, setCurrency, formatMoney } = useCurrency();
   const [uniqueCards, setUniqueCards] = useState(0);
   const [totalCopies, setTotalCopies] = useState(0);
@@ -47,8 +50,11 @@ export default function ProfileScreen() {
       />
 
       <View style={styles.profileCard} lightColor={Colors.light.surface} darkColor={Colors.dark.surface}>
-        <View style={styles.avatar} lightColor={Pokemon.red} darkColor={Pokemon.red}>
-          <Text style={styles.avatarText}>GB</Text>
+        <View
+          style={styles.avatar}
+          lightColor={Colors.light.avatar}
+          darkColor={Colors.dark.avatar}>
+          <Text style={[styles.avatarText, { color: theme.avatarText }]}>GB</Text>
         </View>
         <View style={styles.profileMeta} lightColor="transparent" darkColor="transparent">
           <AppHeading style={styles.trainerName}>GibbonsRich</AppHeading>
@@ -114,7 +120,6 @@ const styles = StyleSheet.create({
     width: 64,
   },
   avatarText: {
-    color: '#fff',
     fontSize: 22,
     fontWeight: '800',
   },

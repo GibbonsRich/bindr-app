@@ -1,6 +1,6 @@
 import { StyleSheet, View as RNView } from 'react-native';
 
-import NotificationButton from '@/components/NotificationButton';
+import HeaderActions from '@/components/HeaderActions';
 
 type Props = {
   children?: React.ReactNode;
@@ -11,7 +11,7 @@ export default function ScreenNotifications({ children }: Props) {
   return (
     <RNView style={styles.wrap}>
       <RNView style={styles.iconSlot}>
-        <NotificationButton />
+        <HeaderActions />
       </RNView>
       {children}
     </RNView>
@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   },
   iconSlot: {
     alignItems: 'flex-end',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingTop: 16,
     position: 'absolute',
     right: 0,
