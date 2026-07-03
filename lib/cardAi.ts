@@ -48,6 +48,8 @@ export async function analyzeCardImage(imageUri: string): Promise<ScanResult> {
     notes.unshift('Card identity confirmed via Pokemon TCG database.');
   } else if (verified.tcgId) {
     notes.unshift('Partial match found in Pokemon TCG database — verify set and number.');
+  } else {
+    notes.unshift('Pokemon TCG lookup had no match — showing AI-identified card details.');
   }
 
   return {

@@ -1,6 +1,7 @@
+import { Platform } from 'react-native';
+
 import { getPokemonTcgApiKey } from '@/lib/config';
 import type { CardCondition } from '@/types/card';
-
 type TcgPriceBucket = {
   market?: number;
   mid?: number;
@@ -75,9 +76,13 @@ function conformNumber(visionNumber: string, apiNumber: string): boolean {
 }
 
 async function searchCards(query: string): Promise<TcgCard[]> {
-  const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}&pageSize=20`;
+  const isWeb = Platform.OS === 'web';
 
-  const response = await fetch(url, { headers: headers() });
+  const url = isWeb
+    ? `/.netlify/functions/pokemon-tcg?q=${encodeURIComponent(query)}&pageSize=20`
+    : `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(query)}&pageSize=20`;
+
+  const response = await fetch(url, { headers: isWeb ? undefined : headers() });
   if (!response.ok) {
     console.warn('Pokemon TCG API lookup failed', response.status);
     return [];
@@ -86,7 +91,6 @@ async function searchCards(query: string): Promise<TcgCard[]> {
   const payload = (await response.json()) as TcgSearchResponse;
   return payload.data ?? [];
 }
-
 function scoreCandidate(card: TcgCard, name: string, set: string, number: string): number {
   let score = 0;
   if (card.name.toLowerCase() === name.toLowerCase()) score += 4;
