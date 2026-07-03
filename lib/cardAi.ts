@@ -1,76 +1,85 @@
-import {
-  getGeminiApiKey,
-  getMissingApiKeyMessage,
-  getOpenAiApiKey,
-  getVisionProvider,
-} from '@/lib/config';
-import { imageUriToBase64 } from '@/lib/imageUtils';
-import { estimateValueFromMarket, verifyCardWithTcgApi } from '@/lib/pokemonTcg';
-import { analyzeWithGemini, analyzeWithOpenAI } from '@/lib/vision';
-import type { ScanResult } from '@/types/card';
+import type { CardCondition, ScanResult } from '@/types/card';
+
+const MOCK_CARDS = [
+  { name: 'Charizard', set: 'Base Set', number: '4/102', rarity: 'Holo Rare', value: 320 },
+  { name: 'Blastoise', set: 'Base Set', number: '2/102', rarity: 'Holo Rare', value: 145 },
+  { name: 'Mewtwo', set: 'Base Set', number: '10/102', rarity: 'Holo Rare', value: 95 },
+  { name: 'Umbreon VMAX', set: 'Evolving Skies', number: '215/203', rarity: 'Secret Rare', value: 280 },
+  { name: 'Lugia V', set: 'Silver Tempest', number: '186/195', rarity: 'Alt Art', value: 78 },
+  { name: 'Pikachu VMAX', set: 'Vivid Voltage', number: '188/185', rarity: 'Secret Rare', value: 65 },
+];
+
+const CONDITIONS: CardCondition[] = ['Mint', 'Near Mint', 'Excellent', 'Good', 'Played'];
+
+function randomFrom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function gradeFor(condition: CardCondition) {
+  const base = {
+    Mint: 9.8,
+    'Near Mint': 8.5,
+    Excellent: 7.2,
+    Good: 5.5,
+    Played: 3.8,
+    Poor: 2.0,
+  }[condition];
+
+  const jitter = () => Math.round((base + (Math.random() - 0.5) * 0.8) * 10) / 10;
+
+  return {
+    overall: condition,
+    centering: jitter(),
+    corners: jitter(),
+    edges: jitter(),
+    surface: jitter(),
+    notes: [
+      'Demo scan — sample data for prototyping',
+      'Centering slightly left-heavy',
+      'Minor holo surface scuff visible under light',
+    ],
+  };
+}
+
+function estimateValue(base: number, condition: CardCondition): number {
+  const multiplier = {
+    Mint: 1.15,
+    'Near Mint': 1,
+    Excellent: 0.78,
+    Good: 0.58,
+    Played: 0.38,
+    Poor: 0.2,
+  }[condition];
+
+  return Math.round(base * multiplier);
+}
+
+/** Demo scan — returns sample card data after a short delay. No API keys required. */
+export async function analyzeCardImage(imageUri: string): Promise<ScanResult> {
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+
+  const template = randomFrom(MOCK_CARDS);
+  const condition = randomFrom(CONDITIONS);
+  const grade = gradeFor(condition);
+
+  return {
+    confidence: Math.round((0.84 + Math.random() * 0.12) * 100) / 100,
+    card: {
+      name: template.name,
+      set: template.set,
+      number: template.number,
+      rarity: template.rarity,
+      imageUri,
+      condition,
+      grade,
+      estimatedValue: estimateValue(template.value, condition),
+    },
+  };
+}
 
 export class ScanAnalysisError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ScanAnalysisError';
   }
-}
-
-/** Analyze a captured card photo with vision AI, then verify identity and pricing via Pokemon TCG API. */
-export async function analyzeCardImage(imageUri: string): Promise<ScanResult> {
-  const provider = getVisionProvider();
-  if (!provider) {
-    throw new ScanAnalysisError(getMissingApiKeyMessage());
-  }
-
-  const { base64, mimeType } = await imageUriToBase64(imageUri);
-
-  const vision =
-    provider === 'gemini'
-      ? await analyzeWithGemini(base64, mimeType, getGeminiApiKey()!)
-      : await analyzeWithOpenAI(base64, mimeType, getOpenAiApiKey()!);
-
-  if (vision.confidence < 0.35) {
-    throw new ScanAnalysisError(
-      vision.grade.notes[0] ??
-        'Could not confidently read this card. Retake the photo with the full card in frame and good lighting.'
-    );
-  }
-
-  const verified = await verifyCardWithTcgApi(vision.name, vision.set, vision.number);
-
-  const confidence = verified.verified
-    ? Math.min(0.99, vision.confidence + 0.12)
-    : vision.confidence;
-
-  const notes = [...vision.grade.notes];
-  if (verified.verified) {
-    notes.unshift('Card identity confirmed via Pokemon TCG database.');
-  } else if (verified.tcgId) {
-    notes.unshift('Partial match found in Pokemon TCG database — verify set and number.');
-  } else {
-    notes.unshift('Pokemon TCG lookup had no match — showing AI-identified card details.');
-  }
-
-  return {
-    confidence,
-    card: {
-      name: verified.verified ? verified.name : vision.name,
-      set: verified.verified ? verified.set : vision.set,
-      number: verified.verified ? verified.number : vision.number,
-      rarity: verified.verified ? verified.rarity : vision.rarity,
-      imageUri,
-      condition: vision.condition,
-      grade: {
-        ...vision.grade,
-        overall: vision.condition,
-        notes,
-      },
-      estimatedValue: estimateValueFromMarket(
-        verified.marketPrice,
-        vision.condition,
-        verified.name || vision.name
-      ),
-    },
-  };
 }

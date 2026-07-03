@@ -12,7 +12,6 @@ import ConditionBadge from '@/components/ConditionBadge';
 import { Text, View } from '@/components/Themed';
 import { showAlert } from '@/lib/alert';
 import { analyzeCardImage, ScanAnalysisError } from '@/lib/cardAi';
-import { getMissingApiKeyMessage, getVisionProvider } from '@/lib/config';
 import { addToPortfolio } from '@/lib/storage';
 import type { ScanResult } from '@/types/card';
 
@@ -24,7 +23,6 @@ export default function ScanScreen() {
   const [cameraReady, setCameraReady] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [saving, setSaving] = useState(false);
-  const hasVisionKey = Boolean(getVisionProvider());
   const isWeb = Platform.OS === 'web';
 
   function openFilePicker() {
@@ -35,11 +33,6 @@ export default function ScanScreen() {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-
-    if (!hasVisionKey) {
-      showAlert('API key required', getMissingApiKeyMessage());
-      return;
-    }
 
     const uri = URL.createObjectURL(file);
     try {
@@ -115,11 +108,6 @@ export default function ScanScreen() {
   async function handleCapture() {
     if (scanning) return;
 
-    if (!hasVisionKey) {
-      showAlert('API key required', getMissingApiKeyMessage());
-      return;
-    }
-
     if (!cameraRef.current) {
       showAlert('Camera not ready', 'Wait for the camera preview to load, then try again.');
       return;
@@ -171,22 +159,18 @@ export default function ScanScreen() {
     }
   }
 
-  const scanDisabled = scanning || !hasVisionKey || !cameraReady;
+  const scanDisabled = scanning || !cameraReady;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.heading}>AI Card Scan</Text>
       <Text style={styles.subtitle}>
-        Point your camera at a card and tap Scan. AI reads the card identity and grades visible
-        condition from the photo.
+        Point your camera at a card and tap Scan. Demo mode uses sample data — no API keys needed.
       </Text>
 
-      {!hasVisionKey ? (
-        <View style={styles.warningBox} lightColor="#fff7ed" darkColor="#422006">
-          <Text style={styles.warningTitle}>API key required</Text>
-          <Text style={styles.warningText}>{getMissingApiKeyMessage()}</Text>
-        </View>
-      ) : null}
+      <View style={styles.demoBox} lightColor="#eff6ff" darkColor="#1e3a5f">
+        <Text style={styles.demoText}>Prototype demo — scan results are sample Pokemon card data</Text>
+      </View>
 
       <View style={styles.cameraFrame} lightColor="#000" darkColor="#000">
         <CameraView
@@ -222,7 +206,7 @@ export default function ScanScreen() {
         <Pressable
           style={[styles.secondaryButton, scanning && styles.disabled]}
           onPress={openFilePicker}
-          disabled={scanning || !hasVisionKey}>
+          disabled={scanning}>
           <Text style={styles.secondaryButtonText}>Choose photo from library</Text>
         </Pressable>
       ) : null}
@@ -308,20 +292,16 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     textAlign: 'center',
   },
-  warningBox: {
+  demoBox: {
     borderRadius: 12,
     marginBottom: 16,
-    padding: 14,
+    padding: 12,
   },
-  warningTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  warningText: {
+  demoText: {
     fontSize: 13,
     lineHeight: 18,
     opacity: 0.85,
+    textAlign: 'center',
   },
   cameraFrame: {
     borderRadius: 20,

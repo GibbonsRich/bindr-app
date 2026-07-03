@@ -30,7 +30,8 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files (tracked for Netlify — private repo)
+# local env files
+.env
 .env*.local
 
 # typescript
