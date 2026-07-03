@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -8,14 +8,22 @@ import {
   Pressable,
   StyleSheet,
 } from 'react-native';
+
 import CardTile from '@/components/CardTile';
+import PageHeader from '@/components/PageHeader';
+import PortfolioChart from '@/components/PortfolioChart';
+import ScreenNotifications from '@/components/ScreenNotifications';
 import { Text, View } from '@/components/Themed';
+import Colors, { Pokemon } from '@/constants/Colors';
+import { useCurrency } from '@/hooks/useCurrency';
 import { loadPortfolio, removeFromPortfolio } from '@/lib/storage';
 import type { PokemonCard } from '@/types/card';
 
 export default function PortfolioScreen() {
+  const router = useRouter();
   const [cards, setCards] = useState<PokemonCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const { currency, setCurrency, formatMoney } = useCurrency();
 
   useFocusEffect(
     useCallback(() => {
@@ -67,43 +75,74 @@ export default function PortfolioScreen() {
       },
     ]);
   }
+
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#E3350D" />
-      </View>
+      <ScreenNotifications>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Pokemon.red} />
+        </View>
+      </ScreenNotifications>
     );
   }
 
-  return (
-    <View style={styles.container}>
+  const listHeader = (
+    <>
+      <PageHeader
+        title="Portfolio"
+        description="Your personal card collection. Track cards, conditions, copies, and estimated total value."
+      />
+      <PortfolioChart
+        totalValue={totalValue}
+        cards={cards}
+        currency={currency}
+        onCurrencyChange={setCurrency}
+        formatMoney={formatMoney}
+      />
       <View style={styles.statsRow}>
         <StatBox label="Unique cards" value={String(cards.length)} />
         <StatBox label="Total copies" value={String(totalCards)} />
-        <StatBox label="Est. value" value={`$${totalValue}`} />
+        <StatBox label="Est. value" value={formatMoney(totalValue)} />
       </View>
+    </>
+  );
 
+  return (
+    <View style={styles.container}>
       {cards.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No cards yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Scan a card on the Scan tab to start building your portfolio.
-          </Text>
-        </View>
+        <FlatList
+          data={[]}
+          renderItem={() => null}
+          ListHeaderComponent={
+            <>
+              {listHeader}
+              <View style={styles.empty}>
+                <Text style={styles.emptyTitle}>No cards yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  Scan a card on the Scan tab to start building your portfolio.
+                </Text>
+              </View>
+            </>
+          }
+        />
       ) : (
         <FlatList
           data={cards}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          ListHeaderComponent={listHeader}
           renderItem={({ item }) => (
             <CardTile
               card={item}
+              valueText={formatMoney(item.estimatedValue)}
+              onPress={() => router.push(`/portfolio/${item.id}`)}
               trailing={
                 <Pressable
                   onPress={() => confirmRemove(item)}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${item.name}`}>                  <Text style={styles.remove}>Remove</Text>
+                  accessibilityLabel={`Remove ${item.name}`}>
+                  <Text style={styles.remove}>Remove</Text>
                 </Pressable>
               }
             />
@@ -116,7 +155,7 @@ export default function PortfolioScreen() {
 
 function StatBox({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.statBox} lightColor="#fef2f2" darkColor="#1f2937">
+    <View style={styles.statBox} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -126,7 +165,8 @@ function StatBox({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   centered: {
     alignItems: 'center',
@@ -156,15 +196,14 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   remove: {
-    color: '#E3350D',
+    color: Pokemon.red,
     fontSize: 13,
     fontWeight: '600',
   },
   empty: {
     alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
     paddingHorizontal: 32,
+    paddingTop: 32,
   },
   emptyTitle: {
     fontSize: 20,

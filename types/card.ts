@@ -16,6 +16,7 @@ export type PokemonCard = {
   number: string;
   rarity: string;
   imageUri?: string;
+  backImageUri?: string;
   condition: CardCondition;
   grade?: CardGrade;
   estimatedValue: number;

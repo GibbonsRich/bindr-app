@@ -1,13 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import type { CurrencyCode } from '@/lib/currency';
+import { isCurrencyCode } from '@/lib/currency';
 import type { PokemonCard, WishlistItem } from '@/types/card';
 
 const PORTFOLIO_KEY = '@bindr/portfolio';
 const WISHLIST_KEY = '@bindr/wishlist';
+const CURRENCY_KEY = '@bindr/currency';
 
 export async function loadPortfolio(): Promise<PokemonCard[]> {
   const raw = await AsyncStorage.getItem(PORTFOLIO_KEY);
   return raw ? JSON.parse(raw) : [];
+}
+
+export async function getPortfolioCard(id: string): Promise<PokemonCard | null> {
+  const portfolio = await loadPortfolio();
+  return portfolio.find((card) => card.id === id) ?? null;
 }
 
 export async function savePortfolio(cards: PokemonCard[]): Promise<void> {
@@ -23,6 +31,8 @@ export async function addToPortfolio(card: PokemonCard): Promise<PokemonCard[]> 
   if (existing) {
     existing.quantity += card.quantity;
     existing.estimatedValue = card.estimatedValue;
+    if (card.imageUri) existing.imageUri = card.imageUri;
+    if (card.backImageUri) existing.backImageUri = card.backImageUri;
   } else {
     portfolio.unshift(card);
   }
@@ -56,6 +66,11 @@ export async function saveWishlist(items: WishlistItem[]): Promise<void> {
 
 export async function addToWishlist(item: WishlistItem): Promise<WishlistItem[]> {
   const wishlist = await loadWishlist();
+  const exists = wishlist.some(
+    (existing) => existing.name === item.name && existing.set === item.set
+  );
+  if (exists) return wishlist;
+
   wishlist.unshift(item);
   await saveWishlist(wishlist);
   return wishlist;
@@ -65,4 +80,14 @@ export async function removeFromWishlist(id: string): Promise<WishlistItem[]> {
   const wishlist = (await loadWishlist()).filter((item) => item.id !== id);
   await saveWishlist(wishlist);
   return wishlist;
+}
+
+export async function loadCurrency(): Promise<CurrencyCode> {
+  const raw = await AsyncStorage.getItem(CURRENCY_KEY);
+  if (raw && isCurrencyCode(raw)) return raw;
+  return 'USD';
+}
+
+export async function saveCurrency(code: CurrencyCode): Promise<void> {
+  await AsyncStorage.setItem(CURRENCY_KEY, code);
 }

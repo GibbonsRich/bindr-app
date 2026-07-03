@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { CurrencyProvider } from '@/hooks/useCurrency';
+import { MessagesProvider } from '@/hooks/useMessages';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -46,11 +48,17 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <CurrencyProvider>
+      <MessagesProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="portfolio/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="messages" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+          </Stack>
+        </ThemeProvider>
+      </MessagesProvider>
+    </CurrencyProvider>
   );
 }

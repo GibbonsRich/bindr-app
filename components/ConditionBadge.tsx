@@ -1,15 +1,22 @@
 import { StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
+import { Pokemon } from '@/constants/Colors';
 import type { CardCondition } from '@/types/card';
 
 const COLORS: Record<CardCondition, string> = {
-  Mint: '#22c55e',
-  'Near Mint': '#84cc16',
-  Excellent: '#eab308',
-  Good: '#f97316',
-  Played: '#ef4444',
-  Poor: '#991b1b',
+  Mint: Pokemon.gbLight,
+  'Near Mint': '#8BAC0F',
+  Excellent: Pokemon.yellow,
+  Good: '#E8985E',
+  Played: Pokemon.red,
+  Poor: Pokemon.gbMid,
+};
+
+const TEXT_COLORS: Partial<Record<CardCondition, string>> = {
+  Excellent: Pokemon.navy,
+  Mint: Pokemon.gbDark,
+  'Near Mint': Pokemon.gbDark,
 };
 
 type Props = {
@@ -19,7 +26,9 @@ type Props = {
 export default function ConditionBadge({ condition }: Props) {
   return (
     <View style={[styles.badge, { backgroundColor: COLORS[condition] }]}>
-      <Text style={styles.text}>{condition}</Text>
+      <Text style={[styles.text, TEXT_COLORS[condition] ? { color: TEXT_COLORS[condition] } : null]}>
+        {condition}
+      </Text>
     </View>
   );
 }
