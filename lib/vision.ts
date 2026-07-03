@@ -42,35 +42,47 @@ Return ONLY valid JSON with this exact shape:
   }
 }`;
 
+function geminiEndpoint(apiKey: string): string {
+  // AI Studio keys (AIza...) use generativelanguage.googleapis.com
+  if (apiKey.startsWith('AIza')) {
+    return `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  }
+
+  // Vertex / service-account style keys use a different host
+  return `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+}
+
 export async function analyzeWithGemini(
   base64: string,
   mimeType: string,
   apiKey: string
 ): Promise<RawVisionAnalysis> {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: ANALYSIS_PROMPT },
-              { inline_data: { mime_type: mimeType, data: base64 } },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
+  const response = await fetch(geminiEndpoint(apiKey), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: ANALYSIS_PROMPT },
+            { inline_data: { mime_type: mimeType, data: base64 } },
+          ],
         },
-      }),
-    }
-  );
+      ],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.2,
+      },
+    }),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(
+        'Gemini API key rejected. Use a key from https://aistudio.google.com/apikey (starts with AIza).'
+      );
+    }
     throw new Error(`Gemini API error (${response.status}): ${errorText.slice(0, 200)}`);
   }
 

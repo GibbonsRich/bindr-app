@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
 
 import ConditionBadge from '@/components/ConditionBadge';
 import { Text, View } from '@/components/Themed';
+import { showAlert } from '@/lib/alert';
 import { analyzeCardImage, ScanAnalysisError } from '@/lib/cardAi';
 import { getMissingApiKeyMessage, getVisionProvider } from '@/lib/config';
 import { addToPortfolio } from '@/lib/storage';
@@ -17,11 +18,71 @@ import type { ScanResult } from '@/types/card';
 
 export default function ScanScreen() {
   const cameraRef = useRef<CameraView>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [saving, setSaving] = useState(false);
   const hasVisionKey = Boolean(getVisionProvider());
+  const isWeb = Platform.OS === 'web';
+
+  function openFilePicker() {
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!hasVisionKey) {
+      showAlert('API key required', getMissingApiKeyMessage());
+      return;
+    }
+
+    const uri = URL.createObjectURL(file);
+    try {
+      await analyzeFromUri(uri);
+    } finally {
+      URL.revokeObjectURL(uri);
+    }
+  }
+
+  function renderWebFileInput() {
+    if (!isWeb) return null;
+
+    return (
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: 'none' }}
+        onChange={handleFileSelected}
+      />
+    );
+  }
+
+  async function analyzeFromUri(uri: string) {
+    setScanning(true);
+    setResult(null);
+
+    try {
+      const analysis = await analyzeCardImage(uri);
+      setResult(analysis);
+    } catch (error) {
+      const message =
+        error instanceof ScanAnalysisError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : 'Could not analyze the card. Try again with better lighting.';
+      showAlert('Scan failed', message);
+    } finally {
+      setScanning(false);
+    }
+  }
 
   if (!permission) {
     return (
@@ -41,18 +102,39 @@ export default function ScanScreen() {
         <Pressable style={styles.primaryButton} onPress={requestPermission}>
           <Text style={styles.primaryButtonText}>Grant permission</Text>
         </Pressable>
+        {isWeb ? (
+          <Pressable style={styles.secondaryButton} onPress={openFilePicker}>
+            <Text style={styles.secondaryButtonText}>Choose photo instead</Text>
+          </Pressable>
+        ) : null}
+        {renderWebFileInput()}
       </View>
     );
   }
 
   async function handleCapture() {
-    if (!cameraRef.current || scanning) return;
+    if (scanning) return;
+
+    if (!hasVisionKey) {
+      showAlert('API key required', getMissingApiKeyMessage());
+      return;
+    }
+
+    if (!cameraRef.current) {
+      showAlert('Camera not ready', 'Wait for the camera preview to load, then try again.');
+      return;
+    }
+
+    if (!cameraReady) {
+      showAlert('Camera not ready', 'Wait a moment for the camera to initialize.');
+      return;
+    }
 
     setScanning(true);
     setResult(null);
 
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: isWeb });
       if (!photo?.uri) throw new Error('No photo captured');
 
       const analysis = await analyzeCardImage(photo.uri);
@@ -61,8 +143,10 @@ export default function ScanScreen() {
       const message =
         error instanceof ScanAnalysisError
           ? error.message
-          : 'Could not capture or analyze the card. Try again with better lighting.';
-      Alert.alert('Scan failed', message);
+          : error instanceof Error
+            ? error.message
+            : 'Could not capture or analyze the card. Try again with better lighting.';
+      showAlert('Scan failed', message);
     } finally {
       setScanning(false);
     }
@@ -80,12 +164,14 @@ export default function ScanScreen() {
         addedAt: new Date().toISOString(),
         source: 'scan',
       });
-      Alert.alert('Added', `${result.card.name} was added to your portfolio.`);
+      showAlert('Added', `${result.card.name} was added to your portfolio.`);
       setResult(null);
     } finally {
       setSaving(false);
     }
   }
+
+  const scanDisabled = scanning || !hasVisionKey || !cameraReady;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -103,21 +189,45 @@ export default function ScanScreen() {
       ) : null}
 
       <View style={styles.cameraFrame} lightColor="#000" darkColor="#000">
-        <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+        <CameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing="back"
+          onCameraReady={() => setCameraReady(true)}
+        />
         {scanning ? (
           <View style={styles.overlay}>
             <ActivityIndicator size="large" color="#fff" />
             <Text style={styles.overlayText}>Analyzing card…</Text>
           </View>
         ) : null}
+        {!cameraReady && !scanning ? (
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color="#fff" />
+            <Text style={styles.overlayText}>Starting camera…</Text>
+          </View>
+        ) : null}
       </View>
 
       <Pressable
-        style={[styles.primaryButton, (scanning || !hasVisionKey) && styles.disabled]}
+        style={[styles.primaryButton, scanDisabled && styles.disabled]}
         onPress={handleCapture}
-        disabled={scanning || !hasVisionKey}>
-        <Text style={styles.primaryButtonText}>{scanning ? 'Scanning…' : 'Scan card'}</Text>
+        disabled={scanDisabled}>
+        <Text style={styles.primaryButtonText}>
+          {scanning ? 'Scanning…' : cameraReady ? 'Scan card' : 'Waiting for camera…'}
+        </Text>
       </Pressable>
+
+      {isWeb ? (
+        <Pressable
+          style={[styles.secondaryButton, scanning && styles.disabled]}
+          onPress={openFilePicker}
+          disabled={scanning || !hasVisionKey}>
+          <Text style={styles.secondaryButtonText}>Choose photo from library</Text>
+        </Pressable>
+      ) : null}
+
+      {renderWebFileInput()}
 
       {result ? (
         <View style={styles.resultCard} lightColor="#fef2f2" darkColor="#1f2937">
@@ -247,7 +357,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#E3350D',
     borderRadius: 12,
-    marginTop: 16,
+    marginTop: 12,
     paddingVertical: 12,
   },
   secondaryButtonText: {
