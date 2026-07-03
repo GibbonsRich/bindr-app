@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import type { CardCondition, CardGrade } from '@/types/card';
 
 export type RawVisionAnalysis = {
@@ -42,14 +44,32 @@ Return ONLY valid JSON with this exact shape:
   }
 }`;
 
-function geminiEndpoint(apiKey: string): string {
-  // AI Studio keys (AIza...) use generativelanguage.googleapis.com
-  if (apiKey.startsWith('AIza')) {
-    return `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-  }
+const GEMINI_MODEL_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
-  // Vertex / service-account style keys use a different host
-  return `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+function buildGeminiRequestBody(base64: string, mimeType: string) {
+  return JSON.stringify({
+    contents: [
+      {
+        parts: [
+          { text: ANALYSIS_PROMPT },
+          { inline_data: { mime_type: mimeType, data: base64 } },
+        ],
+      },
+    ],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: 0.2,
+    },
+  });
+}
+
+function authKeyHelpMessage(): string {
+  return (
+    'Gemini API key rejected. Auth keys (AQ.) must use Google AI Studio. ' +
+    'If this key was ever committed to GitHub, Google may have disabled it — create a new key at ' +
+    'https://aistudio.google.com/apikey and update .env / Netlify env vars.'
+  );
 }
 
 export async function analyzeWithGemini(
@@ -57,31 +77,28 @@ export async function analyzeWithGemini(
   mimeType: string,
   apiKey: string
 ): Promise<RawVisionAnalysis> {
-  const response = await fetch(geminiEndpoint(apiKey), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: ANALYSIS_PROMPT },
-            { inline_data: { mime_type: mimeType, data: base64 } },
-          ],
+  const body = buildGeminiRequestBody(base64, mimeType);
+  const isWeb = Platform.OS === 'web';
+
+  const response = isWeb
+    ? await fetch('/.netlify/functions/gemini-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      })
+    : await fetch(GEMINI_MODEL_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey.trim(),
         },
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.2,
-      },
-    }),
-  });
+        body,
+      });
 
   if (!response.ok) {
     const errorText = await response.text();
     if (response.status === 401 || response.status === 403) {
-      throw new Error(
-        'Gemini API key rejected. Use a key from https://aistudio.google.com/apikey (starts with AIza).'
-      );
+      throw new Error(authKeyHelpMessage());
     }
     throw new Error(`Gemini API error (${response.status}): ${errorText.slice(0, 200)}`);
   }
