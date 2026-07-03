@@ -10,7 +10,8 @@ import {
 
 import ConditionBadge from '@/components/ConditionBadge';
 import { Text, View } from '@/components/Themed';
-import { analyzeCardImage } from '@/lib/cardAi';
+import { analyzeCardImage, ScanAnalysisError } from '@/lib/cardAi';
+import { getMissingApiKeyMessage, getVisionProvider } from '@/lib/config';
 import { addToPortfolio } from '@/lib/storage';
 import type { ScanResult } from '@/types/card';
 
@@ -20,6 +21,7 @@ export default function ScanScreen() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [saving, setSaving] = useState(false);
+  const hasVisionKey = Boolean(getVisionProvider());
 
   if (!permission) {
     return (
@@ -55,8 +57,12 @@ export default function ScanScreen() {
 
       const analysis = await analyzeCardImage(photo.uri);
       setResult(analysis);
-    } catch {
-      Alert.alert('Scan failed', 'Could not capture or analyze the card. Try again.');
+    } catch (error) {
+      const message =
+        error instanceof ScanAnalysisError
+          ? error.message
+          : 'Could not capture or analyze the card. Try again with better lighting.';
+      Alert.alert('Scan failed', message);
     } finally {
       setScanning(false);
     }
@@ -85,8 +91,16 @@ export default function ScanScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.heading}>AI Card Scan</Text>
       <Text style={styles.subtitle}>
-        Point your camera at a card and tap Scan to grade condition.
+        Point your camera at a card and tap Scan. AI reads the card identity and grades visible
+        condition from the photo.
       </Text>
+
+      {!hasVisionKey ? (
+        <View style={styles.warningBox} lightColor="#fff7ed" darkColor="#422006">
+          <Text style={styles.warningTitle}>API key required</Text>
+          <Text style={styles.warningText}>{getMissingApiKeyMessage()}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.cameraFrame} lightColor="#000" darkColor="#000">
         <CameraView ref={cameraRef} style={styles.camera} facing="back" />
@@ -99,9 +113,9 @@ export default function ScanScreen() {
       </View>
 
       <Pressable
-        style={[styles.primaryButton, scanning && styles.disabled]}
+        style={[styles.primaryButton, (scanning || !hasVisionKey) && styles.disabled]}
         onPress={handleCapture}
-        disabled={scanning}>
+        disabled={scanning || !hasVisionKey}>
         <Text style={styles.primaryButtonText}>{scanning ? 'Scanning…' : 'Scan card'}</Text>
       </Pressable>
 
@@ -183,6 +197,21 @@ const styles = StyleSheet.create({
     marginTop: 6,
     opacity: 0.7,
     textAlign: 'center',
+  },
+  warningBox: {
+    borderRadius: 12,
+    marginBottom: 16,
+    padding: 14,
+  },
+  warningTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  warningText: {
+    fontSize: 13,
+    lineHeight: 18,
+    opacity: 0.85,
   },
   cameraFrame: {
     borderRadius: 20,

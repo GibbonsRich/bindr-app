@@ -4,10 +4,10 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
 } from 'react-native';
-
 import CardTile from '@/components/CardTile';
 import { Text, View } from '@/components/Themed';
 import { loadPortfolio, removeFromPortfolio } from '@/lib/storage';
@@ -41,20 +41,32 @@ export default function PortfolioScreen() {
     0
   );
 
+  async function handleRemove(card: PokemonCard) {
+    const updated = await removeFromPortfolio(card.id);
+    setCards(updated);
+  }
+
   function confirmRemove(card: PokemonCard) {
-    Alert.alert('Remove card', `Remove ${card.name} from your portfolio?`, [
+    const message = `Remove ${card.name} from your portfolio?`;
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(message)) {
+        void handleRemove(card);
+      }
+      return;
+    }
+
+    Alert.alert('Remove card', message, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: async () => {
-          const updated = await removeFromPortfolio(card.id);
-          setCards(updated);
+        onPress: () => {
+          void handleRemove(card);
         },
       },
     ]);
   }
-
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -87,8 +99,11 @@ export default function PortfolioScreen() {
             <CardTile
               card={item}
               trailing={
-                <Pressable onPress={() => confirmRemove(item)} hitSlop={8}>
-                  <Text style={styles.remove}>Remove</Text>
+                <Pressable
+                  onPress={() => confirmRemove(item)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${item.name}`}>                  <Text style={styles.remove}>Remove</Text>
                 </Pressable>
               }
             />

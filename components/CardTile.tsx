@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View as RNView } from 'react-native';
 
 import ConditionBadge from '@/components/ConditionBadge';
 import { Text, View } from '@/components/Themed';
@@ -12,15 +12,20 @@ type Props = {
 
 export default function CardTile({ card, onPress, trailing }: Props) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.wrapper, pressed && styles.pressed]}>
+    <RNView style={styles.wrapper}>
       <View style={styles.tile} lightColor="#f8fafc" darkColor="#111827">
         <View style={styles.header}>
-          <View style={styles.meta}>
-            <Text style={styles.name}>{card.name}</Text>
-            <Text style={styles.subtitle}>
-              {card.set} · #{card.number} · {card.rarity}
-            </Text>
-          </View>
+          {onPress ? (
+            <Pressable
+              onPress={onPress}
+              style={({ pressed }) => [styles.meta, pressed && styles.pressed]}>
+              <CardMeta card={card} />
+            </Pressable>
+          ) : (
+            <View style={styles.meta}>
+              <CardMeta card={card} />
+            </View>
+          )}
           {trailing}
         </View>
         <View style={styles.footer}>
@@ -29,7 +34,18 @@ export default function CardTile({ card, onPress, trailing }: Props) {
           {card.quantity > 1 ? <Text style={styles.qty}>×{card.quantity}</Text> : null}
         </View>
       </View>
-    </Pressable>
+    </RNView>
+  );
+}
+
+function CardMeta({ card }: { card: PokemonCard }) {
+  return (
+    <>
+      <Text style={styles.name}>{card.name}</Text>
+      <Text style={styles.subtitle}>
+        {card.set} · #{card.number} · {card.rarity}
+      </Text>
+    </>
   );
 }
 
