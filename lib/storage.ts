@@ -1,0 +1,68 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import type { PokemonCard, WishlistItem } from '@/types/card';
+
+const PORTFOLIO_KEY = '@bindr/portfolio';
+const WISHLIST_KEY = '@bindr/wishlist';
+
+export async function loadPortfolio(): Promise<PokemonCard[]> {
+  const raw = await AsyncStorage.getItem(PORTFOLIO_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+export async function savePortfolio(cards: PokemonCard[]): Promise<void> {
+  await AsyncStorage.setItem(PORTFOLIO_KEY, JSON.stringify(cards));
+}
+
+export async function addToPortfolio(card: PokemonCard): Promise<PokemonCard[]> {
+  const portfolio = await loadPortfolio();
+  const existing = portfolio.find(
+    (item) => item.name === card.name && item.set === card.set && item.condition === card.condition
+  );
+
+  if (existing) {
+    existing.quantity += card.quantity;
+    existing.estimatedValue = card.estimatedValue;
+  } else {
+    portfolio.unshift(card);
+  }
+
+  await savePortfolio(portfolio);
+  return portfolio;
+}
+
+export async function removeFromPortfolio(id: string): Promise<PokemonCard[]> {
+  const portfolio = (await loadPortfolio()).filter((card) => card.id !== id);
+  await savePortfolio(portfolio);
+  return portfolio;
+}
+
+export async function loadWishlist(): Promise<WishlistItem[]> {
+  const raw = await AsyncStorage.getItem(WISHLIST_KEY);
+  if (raw) return JSON.parse(raw);
+
+  const seed: WishlistItem[] = [
+    { id: 'w1', name: 'Charizard', set: 'Base Set', maxPrice: 350, priority: 'high' },
+    { id: 'w2', name: 'Umbreon VMAX', set: 'Evolving Skies', maxPrice: 280, priority: 'high' },
+    { id: 'w3', name: 'Pikachu Illustrator', set: 'Promo', maxPrice: 5000, priority: 'low' },
+  ];
+  await saveWishlist(seed);
+  return seed;
+}
+
+export async function saveWishlist(items: WishlistItem[]): Promise<void> {
+  await AsyncStorage.setItem(WISHLIST_KEY, JSON.stringify(items));
+}
+
+export async function addToWishlist(item: WishlistItem): Promise<WishlistItem[]> {
+  const wishlist = await loadWishlist();
+  wishlist.unshift(item);
+  await saveWishlist(wishlist);
+  return wishlist;
+}
+
+export async function removeFromWishlist(id: string): Promise<WishlistItem[]> {
+  const wishlist = (await loadWishlist()).filter((item) => item.id !== id);
+  await saveWishlist(wishlist);
+  return wishlist;
+}
