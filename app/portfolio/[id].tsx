@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 
+import AppHeading from '@/components/AppHeading';
 import CardDetailView from '@/components/CardDetailView';
 import NotificationButton from '@/components/NotificationButton';
 import ScreenNotifications from '@/components/ScreenNotifications';
@@ -64,7 +65,7 @@ export default function PortfolioCardDetailScreen() {
     return (
       <ScreenNotifications>
         <View style={styles.centered}>
-          <Text style={styles.emptyTitle}>Card not found</Text>
+          <AppHeading style={styles.emptyTitle}>Card not found</AppHeading>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backButtonText}>Go back</Text>
           </Pressable>
@@ -93,9 +94,8 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
     marginBottom: 16,
+    textAlign: 'center',
   },
   backButton: {
     backgroundColor: Pokemon.blue,

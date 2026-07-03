@@ -23,9 +23,9 @@ export default function NotificationButton() {
       }>
       <SymbolView
         name={{
-          ios: 'bell.fill',
-          android: 'notifications',
-          web: 'notifications',
+          ios: 'message.fill',
+          android: 'chat',
+          web: 'chat',
         }}
         tintColor={tint}
         size={24}

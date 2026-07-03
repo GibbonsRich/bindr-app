@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
+import AppHeading from '@/components/AppHeading';
 import CurrencyPicker from '@/components/CurrencyPicker';
 import PageHeader from '@/components/PageHeader';
 import { Text, View } from '@/components/Themed';
@@ -50,13 +51,13 @@ export default function ProfileScreen() {
           <Text style={styles.avatarText}>GB</Text>
         </View>
         <View style={styles.profileMeta} lightColor="transparent" darkColor="transparent">
-          <Text style={styles.trainerName}>GibbonsRich</Text>
+          <AppHeading style={styles.trainerName}>GibbonsRich</AppHeading>
           <Text style={styles.trainerTag}>Pokemon TCG Collector</Text>
           <Text style={styles.memberSince}>Member since 2026</Text>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Collection</Text>
+      <AppHeading style={styles.sectionTitle}>Collection</AppHeading>
       <View style={styles.statsRow}>
         <StatBox label="Unique cards" value={String(uniqueCards)} />
         <StatBox label="Total copies" value={String(totalCopies)} />
@@ -68,7 +69,7 @@ export default function ProfileScreen() {
         <Text style={styles.infoValue}>{wishlistCount}</Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Preferences</Text>
+      <AppHeading style={styles.sectionTitle}>Preferences</AppHeading>
       <View style={styles.prefsCard} lightColor={Colors.light.surface} darkColor={Colors.dark.surface}>
         <CurrencyPicker value={currency} onChange={setCurrency} />
       </View>
@@ -121,8 +122,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   trainerName: {
-    fontSize: 22,
-    fontWeight: '800',
+    marginBottom: 0,
   },
   trainerTag: {
     fontSize: 13,
@@ -135,8 +135,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
     marginBottom: 10,
     marginTop: 20,
   },

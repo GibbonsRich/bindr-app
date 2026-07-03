@@ -108,9 +108,9 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{
-                ios: 'square.grid.2x2.fill',
-                android: 'grid_view',
-                web: 'grid_view',
+                ios: 'chart.line.uptrend.xyaxis',
+                android: 'trending_up',
+                web: 'trending_up',
               }}
               tintColor={color}
               size={26}
@@ -121,7 +121,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="match"
         options={{
-          title: 'Match',
+          title: 'Trade',
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{

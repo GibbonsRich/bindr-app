@@ -1,15 +1,8 @@
-import * as Location from 'expo-location';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View as RNView } from 'react-native';
 
+import AppHeading from '@/components/AppHeading';
 import CardImage from '@/components/CardImage';
 import ConditionBadge from '@/components/ConditionBadge';
 import PageHeader from '@/components/PageHeader';
@@ -17,8 +10,14 @@ import ScreenNotifications from '@/components/ScreenNotifications';
 import TradeMessageModal from '@/components/TradeMessageModal';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
+import { confirmAction, pickFromList } from '@/lib/alert';
 import { findMatchesForWishlist } from '@/lib/collectors';
 import { loadWishlist, removeFromWishlist } from '@/lib/storage';
+import {
+  loadTradeLocation,
+  saveTradeLocation,
+  TRADE_LOCATIONS,
+} from '@/lib/tradeLocation';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useMessages } from '@/hooks/useMessages';
 import type { CollectorListing, WishlistItem } from '@/types/card';
@@ -31,7 +30,7 @@ export default function MatchScreen() {
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [radius, setRadius] = useState(10);
   const [loading, setLoading] = useState(true);
-  const [locationStatus, setLocationStatus] = useState<string | null>(null);
+  const [locationLabel, setLocationLabel] = useState('Plymouth, UK');
   const [messageTarget, setMessageTarget] = useState<CollectorListing | null>(null);
   const [sentKeys, setSentKeys] = useState<Set<string>>(new Set());
 
@@ -52,19 +51,19 @@ export default function MatchScreen() {
 
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const position = await Location.getCurrentPositionAsync({});
-        setLocationStatus(
-          `Near ${position.coords.latitude.toFixed(2)}, ${position.coords.longitude.toFixed(2)}`
-        );
-      } else {
-        setLocationStatus('Location off — showing demo matches');
-      }
-
+      const saved = await loadTradeLocation();
+      setLocationLabel(saved);
       setLoading(false);
     })();
   }, []);
+
+  function changeLocation() {
+    pickFromList('Change location', [...TRADE_LOCATIONS], (index) => {
+      const location = TRADE_LOCATIONS[index];
+      setLocationLabel(location);
+      void saveTradeLocation(location);
+    });
+  }
 
   const matches = useMemo(
     () => findMatchesForWishlist(wishlist, radius),
@@ -88,25 +87,14 @@ export default function MatchScreen() {
   }
 
   function confirmRemove(item: WishlistItem) {
-    const message = `Remove ${item.name} from your wishlist?`;
-
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(message)) {
+    confirmAction(
+      'Remove from wishlist',
+      `Remove ${item.name} from your wishlist?`,
+      'Remove',
+      () => {
         void handleRemove(item);
       }
-      return;
-    }
-
-    Alert.alert('Remove from wishlist', message, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          void handleRemove(item);
-        },
-      },
-    ]);
+    );
   }
 
   async function handleSendMessage(listing: CollectorListing, message: string) {
@@ -135,10 +123,15 @@ export default function MatchScreen() {
     <>
       <ScrollView contentContainerStyle={styles.container}>
       <PageHeader
-        title="Match"
+        title="Trade"
         description="See which nearby collectors have cards on your wishlist. Filter by distance and compare asking prices."
       />
-      {locationStatus ? <Text style={styles.location}>{locationStatus}</Text> : null}
+      <RNView style={styles.locationRow}>
+        <Text style={styles.location}>{locationLabel}</Text>
+        <Pressable onPress={changeLocation} hitSlop={8} accessibilityRole="button">
+          <Text style={styles.changeLocation}>change location</Text>
+        </Pressable>
+      </RNView>
 
       <View style={styles.radiusRow}>
         {RADIUS_OPTIONS.map((option) => (
@@ -155,7 +148,7 @@ export default function MatchScreen() {
       </View>
 
       <View style={styles.wishlistSection}>
-        <Text style={styles.sectionTitle}>Your wishlist</Text>
+        <AppHeading style={styles.sectionTitle}>Your wishlist</AppHeading>
         {wishlist.length === 0 ? (
           <View style={styles.wishlistEmpty} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
             <Text style={styles.wishlistEmptyText}>
@@ -185,13 +178,13 @@ export default function MatchScreen() {
         )}
       </View>
 
-      <Text style={styles.sectionTitle}>
-        {matches.length} match{matches.length === 1 ? '' : 'es'} within {radius} mi
-      </Text>
+      <AppHeading style={styles.sectionTitle}>
+        {matches.length} trade{matches.length === 1 ? '' : 's'} within {radius} mi
+      </AppHeading>
 
       {grouped.length === 0 ? (
         <View style={styles.empty} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
-          <Text style={styles.emptyTitle}>No matches nearby</Text>
+          <AppHeading style={styles.emptyTitle}>No trades nearby</AppHeading>
           <Text style={styles.emptySubtitle}>
             Try increasing the radius or add more cards to your wishlist.
           </Text>
@@ -204,7 +197,7 @@ export default function MatchScreen() {
               <View style={styles.matchHeader} lightColor="transparent" darkColor="transparent">
                 <CardImage name={cardName} set={setName} size="md" />
                 <View style={styles.matchHeaderText} lightColor="transparent" darkColor="transparent">
-                  <Text style={styles.matchCardName}>{cardName}</Text>
+                  <AppHeading style={styles.matchCardName}>{cardName}</AppHeading>
                   <Text style={styles.matchSet}>{setName}</Text>
                 </View>
               </View>
@@ -271,10 +264,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  location: {
-    fontSize: 12,
+  locationRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
     marginTop: 8,
-    opacity: 0.5,
+  },
+  location: {
+    fontSize: 13,
+    fontWeight: '600',
+    opacity: 0.75,
+  },
+  changeLocation: {
+    color: Pokemon.blue,
+    fontSize: 13,
+    fontWeight: '700',
   },
   radiusRow: {
     flexDirection: 'row',
@@ -303,8 +307,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
     marginBottom: 10,
     marginTop: 8,
   },
@@ -358,8 +360,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   matchCardName: {
-    fontSize: 18,
-    fontWeight: '800',
+    marginBottom: 0,
   },
   matchSet: {
     fontSize: 13,
@@ -419,8 +420,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    marginBottom: 0,
   },
   emptySubtitle: {
     fontSize: 13,

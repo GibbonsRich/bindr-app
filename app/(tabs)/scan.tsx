@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 
+import AppHeading from '@/components/AppHeading';
 import ConditionBadge from '@/components/ConditionBadge';
 import CardImage from '@/components/CardImage';
 import PageHeader from '@/components/PageHeader';
@@ -16,7 +17,7 @@ import ScreenNotifications from '@/components/ScreenNotifications';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
 import { useCurrency } from '@/hooks/useCurrency';
-import { showAlert } from '@/lib/alert';
+import { showAlert, showSuccess } from '@/lib/alert';
 import { analyzeCardImage, ScanAnalysisError } from '@/lib/cardAi';
 import { createScanPreviewId, setScanPreviewCard } from '@/lib/scanPreview';
 import { addToPortfolio } from '@/lib/storage';
@@ -188,7 +189,7 @@ export default function ScanScreen() {
     setSaving(true);
     try {
       await addToPortfolio(buildPreviewCard(result, `card-${Date.now()}`));
-      showAlert('Added', `${result.card.name} was added to your portfolio.`);
+      showSuccess('Added', `${result.card.name} was added to your portfolio.`);
       resetScanSession();
       setBackImageUri(null);
     } finally {
@@ -214,7 +215,7 @@ export default function ScanScreen() {
           description="Photograph the front and back of a Pokemon card to grade its condition and estimate value."
         />
         <View style={styles.centeredContent}>
-          <Text style={styles.title}>Camera access needed</Text>
+          <AppHeading style={styles.title}>Camera access needed</AppHeading>
           <Text style={styles.permissionHint}>
             Allow camera access to scan the front and back of your cards.
           </Text>
@@ -321,7 +322,7 @@ export default function ScanScreen() {
                 backImageUri={result.card.backImageUri ?? backImageUri ?? undefined}
                 size="lg"
               />
-              <Text style={styles.resultTitle}>{result.card.name}</Text>
+              <AppHeading style={styles.resultTitle}>{result.card.name}</AppHeading>
               <Text style={styles.resultMeta}>
                 {result.card.set} · #{result.card.number} · {result.card.rarity}
               </Text>
@@ -421,8 +422,6 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -588,8 +587,6 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   resultTitle: {
-    fontSize: 20,
-    fontWeight: '800',
     marginTop: 16,
     textAlign: 'center',
   },

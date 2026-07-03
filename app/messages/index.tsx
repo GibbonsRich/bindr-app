@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import DeleteThreadButton from '@/components/DeleteThreadButton';
+import AppHeading from '@/components/AppHeading';
 import MessageChatView from '@/components/MessageChatView';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
@@ -77,7 +78,7 @@ export default function MessagesInboxScreen() {
             <Pressable onPress={() => router.back()} style={styles.backLink}>
               <Text style={styles.backLinkText}>← Back</Text>
             </Pressable>
-            <Text style={styles.headerTitle}>Messages</Text>
+            <AppHeading style={styles.headerTitle}>Messages</AppHeading>
             {unreadCount > 0 ? (
               <Text style={styles.unreadSummary}>
                 {unreadCount} unread notification{unreadCount === 1 ? '' : 's'}
@@ -93,9 +94,9 @@ export default function MessagesInboxScreen() {
                 style={styles.empty}
                 lightColor={Colors.light.surfaceAlt}
                 darkColor={Colors.dark.surfaceAlt}>
-                <Text style={styles.emptyTitle}>No messages yet</Text>
+                <AppHeading style={styles.emptyTitle}>No messages yet</AppHeading>
                 <Text style={styles.emptySubtitle}>
-                  Message a collector from the Match tab to start a trade conversation.
+                  Message a collector from the Trade tab to start a trade conversation.
                 </Text>
               </View>
             </View>
@@ -212,8 +213,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   headerTitle: {
-    fontSize: 30,
-    fontWeight: '800',
+    marginBottom: 0,
   },
   unreadSummary: {
     fontSize: 13,
@@ -344,8 +344,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    marginBottom: 0,
   },
   emptySubtitle: {
     fontSize: 13,

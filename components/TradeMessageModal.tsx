@@ -8,6 +8,7 @@ import {
   TextInput,
 } from 'react-native';
 
+import AppHeading from '@/components/AppHeading';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -41,7 +42,7 @@ export default function TradeMessageModal({ listing, formatPrice, onClose, onSen
         style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close message" />
         <View style={styles.sheet} lightColor={theme.surface} darkColor={theme.surface}>
-          <Text style={styles.title}>Message {listing.collectorName}</Text>
+          <AppHeading style={styles.title}>Message {listing.collectorName}</AppHeading>
           <Text style={styles.subtitle}>
             {listing.cardName} · {listing.set} · {listing.condition}
           </Text>
@@ -101,8 +102,7 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
+    marginBottom: 0,
   },
   subtitle: {
     fontSize: 13,

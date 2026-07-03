@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, View as RNView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import AppHeading from '@/components/AppHeading';
 import MessageChatView from '@/components/MessageChatView';
 import { Text } from '@/components/Themed';
 import { Pokemon } from '@/constants/Colors';
@@ -46,7 +47,7 @@ export default function MessageChatScreen() {
   if (!thread) {
     return (
       <RNView style={[styles.centered, { paddingTop: insets.top }]}>
-        <Text style={styles.errorTitle}>Conversation not found</Text>
+        <AppHeading style={styles.errorTitle}>Conversation not found</AppHeading>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>Back to messages</Text>
         </Pressable>
@@ -77,9 +78,8 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
     marginBottom: 16,
+    textAlign: 'center',
   },
   backButton: {
     backgroundColor: Pokemon.blue,

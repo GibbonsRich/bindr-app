@@ -1,11 +1,19 @@
 import { Link } from 'expo-router';
 import { ScrollView, StyleSheet } from 'react-native';
 
+import AppHeading from '@/components/AppHeading';
 import PageHeader from '@/components/PageHeader';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
 
 const FEATURES = [
+  {
+    title: 'Search cards',
+    description:
+      'Browse the Pokemon TCG catalog, check estimated prices, and add cards straight to your wishlist.',
+    href: '/search' as const,
+    cta: 'Search catalog',
+  },
   {
     title: 'Scan cards',
     description:
@@ -21,11 +29,18 @@ const FEATURES = [
     cta: 'View portfolio',
   },
   {
-    title: 'Match with collectors',
+    title: 'Trade with collectors',
     description:
       'Cross-reference your wishlist with nearby collectors. Find who has the cards you want and compare prices before you trade or buy.',
     href: '/match' as const,
-    cta: 'Find matches',
+    cta: 'Find trades',
+  },
+  {
+    title: 'Your profile',
+    description:
+      'See collection stats, wishlist count, and preferences like display currency — all in one place.',
+    href: '/profile' as const,
+    cta: 'View profile',
   },
 ];
 
@@ -33,16 +48,16 @@ export default function HomeScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <PageHeader
-        large
         title="Bindr"
+        tagline="what's in your bindr?"
         description="Your Pokemon TCG companion. Scan cards, track your collection, and find trades with nearby collectors."
       />
 
-      <Text style={styles.sectionTitle}>What you can do</Text>
+      <AppHeading style={styles.sectionTitle}>What you can do</AppHeading>
 
       {FEATURES.map((feature) => (
         <View key={feature.title} style={styles.card} lightColor={Colors.light.surface} darkColor={Colors.dark.surface}>
-          <Text style={styles.cardTitle}>{feature.title}</Text>
+          <AppHeading style={styles.cardTitle}>{feature.title}</AppHeading>
           <Text style={styles.cardBody}>{feature.description}</Text>
           <Link href={feature.href} style={styles.link}>
             <Text style={styles.linkText}>{feature.cta} →</Text>
@@ -52,7 +67,7 @@ export default function HomeScreen() {
 
       <View style={styles.footer} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
         <Text style={styles.footerText}>
-          Prototype demo — scan uses sample data. Portfolio and match features use local storage and
+          Prototype demo — scan uses sample data. Portfolio and trade features use local storage and
           demo collector listings.
         </Text>
       </View>
@@ -67,8 +82,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
     marginBottom: 14,
   },
   card: {
@@ -77,8 +90,6 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
     marginBottom: 8,
   },
   cardBody: {

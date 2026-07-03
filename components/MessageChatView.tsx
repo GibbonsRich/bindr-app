@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import DeleteThreadButton from '@/components/DeleteThreadButton';
+import AppHeading from '@/components/AppHeading';
 import NotificationButton from '@/components/NotificationButton';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
@@ -101,7 +102,7 @@ export default function MessageChatView({ thread, onBack, onDelete }: Props) {
               <NotificationButton />
             </View>
           </View>
-          <Text style={styles.headerName}>{liveThread.collectorName}</Text>
+          <AppHeading style={styles.headerName}>{liveThread.collectorName}</AppHeading>
           <Text style={styles.headerMeta}>
             {liveThread.cardName} · {liveThread.set}
           </Text>
@@ -221,8 +222,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   headerName: {
-    fontSize: 22,
-    fontWeight: '800',
+    marginBottom: 0,
   },
   headerMeta: {
     fontSize: 13,

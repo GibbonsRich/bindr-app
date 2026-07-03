@@ -1,14 +1,8 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Platform,
-  Pressable,
-  StyleSheet,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet } from 'react-native';
 
+import AppHeading from '@/components/AppHeading';
 import CardTile from '@/components/CardTile';
 import PageHeader from '@/components/PageHeader';
 import PortfolioChart from '@/components/PortfolioChart';
@@ -16,6 +10,7 @@ import ScreenNotifications from '@/components/ScreenNotifications';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
 import { useCurrency } from '@/hooks/useCurrency';
+import { confirmAction } from '@/lib/alert';
 import { loadPortfolio, removeFromPortfolio } from '@/lib/storage';
 import type { PokemonCard } from '@/types/card';
 
@@ -55,25 +50,9 @@ export default function PortfolioScreen() {
   }
 
   function confirmRemove(card: PokemonCard) {
-    const message = `Remove ${card.name} from your portfolio?`;
-
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(message)) {
-        void handleRemove(card);
-      }
-      return;
-    }
-
-    Alert.alert('Remove card', message, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          void handleRemove(card);
-        },
-      },
-    ]);
+    confirmAction('Remove card', `Remove ${card.name} from your portfolio?`, 'Remove', () => {
+      void handleRemove(card);
+    });
   }
 
   if (loading) {
@@ -117,7 +96,7 @@ export default function PortfolioScreen() {
             <>
               {listHeader}
               <View style={styles.empty}>
-                <Text style={styles.emptyTitle}>No cards yet</Text>
+                <AppHeading style={styles.emptyTitle}>No cards yet</AppHeading>
                 <Text style={styles.emptySubtitle}>
                   Scan a card on the Scan tab to start building your portfolio.
                 </Text>
@@ -206,8 +185,7 @@ const styles = StyleSheet.create({
     paddingTop: 32,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    marginBottom: 0,
   },
   emptySubtitle: {
     fontSize: 14,

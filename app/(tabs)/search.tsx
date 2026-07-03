@@ -7,13 +7,14 @@ import {
   TextInput,
 } from 'react-native';
 
+import AppHeading from '@/components/AppHeading';
 import CardImage from '@/components/CardImage';
 import PageHeader from '@/components/PageHeader';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useCurrency } from '@/hooks/useCurrency';
-import { showAlert } from '@/lib/alert';
+import { showSuccess } from '@/lib/alert';
 import { searchCards, wishlistKey, type CatalogCard } from '@/lib/cardCatalog';
 import { addToWishlist, loadWishlist } from '@/lib/storage';
 
@@ -57,7 +58,7 @@ export default function SearchScreen() {
         priority: 'medium',
       });
       setWishlistKeys((current) => new Set([...current, key]));
-      showAlert('Added to wishlist', `${card.name} (${card.set}) was added to your wishlist.`);
+      showSuccess('Added to wishlist', `${card.name} (${card.set}) was added to your wishlist.`);
     } finally {
       setAddingKey(null);
     }
@@ -67,7 +68,7 @@ export default function SearchScreen() {
     <View style={styles.container}>
       <PageHeader
         title="Search"
-        description="Find Pokemon cards and add them to your wishlist for matching with nearby collectors."
+        description="Find Pokemon cards and add them to your wishlist for trading with nearby collectors."
       />
 
       <View
@@ -89,14 +90,14 @@ export default function SearchScreen() {
 
       {query.trim().length === 0 ? (
         <View style={styles.empty} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
-          <Text style={styles.emptyTitle}>Search the catalog</Text>
+          <AppHeading style={styles.emptyTitle}>Search the catalog</AppHeading>
           <Text style={styles.emptySubtitle}>
             Try Charizard, Evolving Skies, or Secret Rare to find cards to wish for.
           </Text>
         </View>
       ) : results.length === 0 ? (
         <View style={styles.empty} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
-          <Text style={styles.emptyTitle}>No cards found</Text>
+          <AppHeading style={styles.emptyTitle}>No cards found</AppHeading>
           <Text style={styles.emptySubtitle}>Try a different name or set.</Text>
         </View>
       ) : (
@@ -226,8 +227,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    marginBottom: 0,
   },
   emptySubtitle: {
     fontSize: 13,

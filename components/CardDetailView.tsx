@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
+import AppHeading from '@/components/AppHeading';
 import CardImage from '@/components/CardImage';
 import ConditionBadge from '@/components/ConditionBadge';
 import { Text, View } from '@/components/Themed';
@@ -33,7 +34,7 @@ export default function CardDetailView({
         {headerRight}
       </View>
 
-      <Text style={styles.title}>{card.name}</Text>
+      <AppHeading style={styles.title}>{card.name}</AppHeading>
       <Text style={styles.subtitle}>
         {card.set} · #{card.number} · {card.rarity}
       </Text>
@@ -47,13 +48,13 @@ export default function CardDetailView({
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Your photos</Text>
+      <AppHeading style={styles.sectionTitle}>Your photos</AppHeading>
       <View style={styles.photoRow} lightColor="transparent" darkColor="transparent">
         <PhotoSlot label="Front" card={card} variant="front" />
         <PhotoSlot label="Back" card={card} variant="back" />
       </View>
 
-      <Text style={styles.sectionTitle}>Average sold price by condition</Text>
+      <AppHeading style={styles.sectionTitle}>Average sold price by condition</AppHeading>
       <View style={styles.table} lightColor={Colors.light.surface} darkColor={Colors.dark.surface}>
         {market.averageByCondition.map((row) => (
           <ConditionPriceRow
@@ -65,7 +66,7 @@ export default function CardDetailView({
         ))}
       </View>
 
-      <Text style={styles.sectionTitle}>Last sold</Text>
+      <AppHeading style={styles.sectionTitle}>Last sold</AppHeading>
       <View style={styles.lastSale} lightColor={Colors.light.surface} darkColor={Colors.dark.surface}>
         <View style={styles.lastSaleTop} lightColor="transparent" darkColor="transparent">
           <Text style={styles.lastSalePrice}>{formatMoney(market.lastSale.price)}</Text>
@@ -144,8 +145,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
+    marginBottom: 0,
   },
   subtitle: {
     fontSize: 14,
@@ -178,8 +178,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
     marginBottom: 10,
     marginTop: 22,
   },
