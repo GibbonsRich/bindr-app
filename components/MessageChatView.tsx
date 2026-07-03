@@ -1,6 +1,7 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -9,50 +10,58 @@ import {
   TextInput,
 } from 'react-native';
 
+import DeleteThreadButton from '@/components/DeleteThreadButton';
 import NotificationButton from '@/components/NotificationButton';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useMessages } from '@/hooks/useMessages';
-import { formatChatTime, parseThreadId } from '@/lib/messages';
-import type { TradeMessage } from '@/types/message';
+import { formatChatTime, threadKey } from '@/lib/messages';
+import type { MessageThread, TradeMessage } from '@/types/message';
 
-export default function MessageThreadScreen() {
-  const router = useRouter();
+type Props = {
+  thread: MessageThread;
+  onBack: () => void;
+  onDelete?: () => void;
+};
+
+export default function MessageChatView({ thread, onBack, onDelete }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const theme = Colors[scheme];
-  const { threadId } = useLocalSearchParams<{ threadId: string }>();
-  const { threads, refreshMessages, sendReply, markThreadAsRead, isThreadTyping } = useMessages();
+  const { ready, sendReply, markThreadAsRead, isThreadTyping, threads } = useMessages();
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList<TradeMessage>>(null);
 
-  const threadMeta = useMemo(() => (threadId ? parseThreadId(threadId) : null), [threadId]);
+  const liveThread = useMemo(() => {
+    const key = threadKey(thread.collectorId, thread.cardName, thread.set);
+    return (
+      threads.find(
+        (entry) => threadKey(entry.collectorId, entry.cardName, entry.set) === key
+      ) ?? thread
+    );
+  }, [thread, threads]);
 
-  const thread = useMemo(
-    () => threads.find((item) => item.threadId === threadId) ?? null,
-    [threads, threadId]
-  );
+  const markRead = useCallback(() => {
+    void markThreadAsRead(liveThread.collectorId, liveThread.cardName, liveThread.set);
+  }, [markThreadAsRead, liveThread.collectorId, liveThread.cardName, liveThread.set]);
 
   useFocusEffect(
     useCallback(() => {
-      void refreshMessages();
-      if (threadMeta) {
-        void markThreadAsRead(threadMeta.collectorId, threadMeta.cardName, threadMeta.set);
-      }
-    }, [refreshMessages, markThreadAsRead, threadMeta])
+      if (ready) markRead();
+    }, [ready, markRead])
   );
 
   async function handleSend() {
-    if (!thread || !draft.trim() || sending) return;
+    if (!draft.trim() || sending) return;
 
     setSending(true);
     try {
       await sendReply(draft.trim(), {
-        collectorId: thread.collectorId,
-        collectorName: thread.collectorName,
-        cardName: thread.cardName,
-        set: thread.set,
+        collectorId: liveThread.collectorId,
+        collectorName: liveThread.collectorName,
+        cardName: liveThread.cardName,
+        set: liveThread.set,
       });
       setDraft('');
       requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
@@ -61,18 +70,15 @@ export default function MessageThreadScreen() {
     }
   }
 
-  if (!threadId || !threadMeta || !thread) {
+  if (!ready) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorTitle}>Conversation not found</Text>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Back to messages</Text>
-        </Pressable>
+        <ActivityIndicator size="large" color={Pokemon.red} />
       </View>
     );
   }
 
-  const typing = isThreadTyping(thread.collectorId, thread.cardName, thread.set);
+  const typing = isThreadTyping(liveThread.collectorId, liveThread.cardName, liveThread.set);
 
   return (
     <KeyboardAvoidingView
@@ -82,24 +88,36 @@ export default function MessageThreadScreen() {
       <View style={styles.flex} lightColor={theme.background} darkColor={theme.background}>
         <View style={styles.header} lightColor={theme.surface} darkColor={theme.surface}>
           <View style={styles.headerRow} lightColor="transparent" darkColor="transparent">
-            <Pressable onPress={() => router.back()} style={styles.backLink}>
+            <Pressable onPress={onBack} style={styles.backLink}>
               <Text style={styles.backLinkText}>← Messages</Text>
             </Pressable>
-            <NotificationButton />
+            <View style={styles.headerActions} lightColor="transparent" darkColor="transparent">
+              {onDelete ? (
+                <DeleteThreadButton
+                  onPress={onDelete}
+                  accessibilityLabel={`Delete chat with ${liveThread.collectorName}`}
+                />
+              ) : null}
+              <NotificationButton />
+            </View>
           </View>
-          <Text style={styles.headerName}>{thread.collectorName}</Text>
+          <Text style={styles.headerName}>{liveThread.collectorName}</Text>
           <Text style={styles.headerMeta}>
-            {thread.cardName} · {thread.set}
+            {liveThread.cardName} · {liveThread.set}
           </Text>
         </View>
 
         <FlatList
           ref={listRef}
-          data={thread.messages}
+          style={styles.flex}
+          data={liveThread.messages}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.chatList}
+          keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          ListFooterComponent={typing ? <TypingBubble collectorName={thread.collectorName} /> : null}
+          ListFooterComponent={
+            typing ? <TypingBubble collectorName={liveThread.collectorName} /> : null
+          }
           renderItem={({ item }) => (
             <ChatBubble message={item} isMine={item.direction === 'outbound'} />
           )}
@@ -110,7 +128,9 @@ export default function MessageThreadScreen() {
             value={draft}
             onChangeText={setDraft}
             placeholder="Message about a trade…"
-            placeholderTextColor={scheme === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(29,45,94,0.45)'}
+            placeholderTextColor={
+              scheme === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(29,45,94,0.45)'
+            }
             style={[
               styles.input,
               {
@@ -136,8 +156,11 @@ export default function MessageThreadScreen() {
 
 function TypingBubble({ collectorName }: { collectorName: string }) {
   return (
-    <View style={styles.bubbleRowTheirs} lightColor="transparent" darkColor="transparent">
-      <View style={styles.typingBubble} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
+    <View style={styles.bubbleRowTheirs} pointerEvents="none">
+      <View
+        style={styles.typingBubble}
+        lightColor={Colors.light.surfaceAlt}
+        darkColor={Colors.dark.surfaceAlt}>
         <Text style={styles.typingText}>{collectorName} is typing…</Text>
       </View>
     </View>
@@ -148,8 +171,7 @@ function ChatBubble({ message, isMine }: { message: TradeMessage; isMine: boolea
   return (
     <View
       style={[styles.bubbleRow, isMine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}
-      lightColor="transparent"
-      darkColor="transparent">
+      pointerEvents="none">
       <View
         style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}
         lightColor={isMine ? Pokemon.blue : Colors.light.surfaceAlt}
@@ -166,27 +188,13 @@ function ChatBubble({ message, isMine }: { message: TradeMessage; isMine: boolea
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+    minHeight: 0,
   },
   centered: {
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  backButton: {
-    backgroundColor: Pokemon.blue,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontWeight: '700',
   },
   header: {
     paddingBottom: 14,
@@ -198,6 +206,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
+  },
+  headerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
   },
   backLink: {
     paddingVertical: 4,
@@ -230,11 +243,6 @@ const styles = StyleSheet.create({
   },
   bubbleRowTheirs: {
     alignSelf: 'flex-start',
-  },
-  bubbleRowTheirs: {
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-    maxWidth: '82%',
   },
   typingBubble: {
     borderBottomLeftRadius: 4,

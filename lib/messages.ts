@@ -25,7 +25,87 @@ export function pickFakeReply(cardName: string, collectorName: string): string {
 }
 
 export function buildThreadId(collectorId: string, cardName: string, set: string): string {
-  return encodeURIComponent(`${collectorId}|${cardName}|${set}`);
+  return encodeThreadKeyForRoute(threadKey(collectorId, cardName, set));
+}
+
+function encodeThreadKeyForRoute(key: string): string {
+  const uriEncoded = encodeURIComponent(key);
+  const bytes: number[] = [];
+
+  for (let index = 0; index < uriEncoded.length; ) {
+    if (uriEncoded[index] === '%') {
+      bytes.push(parseInt(uriEncoded.slice(index + 1, index + 3), 16));
+      index += 3;
+    } else {
+      bytes.push(uriEncoded.charCodeAt(index));
+      index += 1;
+    }
+  }
+
+  return bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function decodeThreadKeyFromRoute(routeId: string): string | null {
+  if (!/^[0-9a-f]+$/i.test(routeId) || routeId.length % 2 !== 0) return null;
+
+  try {
+    const bytes = routeId.match(/.{2}/g)!.map((hex) => parseInt(hex, 16));
+    let uri = '';
+
+    for (const byte of bytes) {
+      if (
+        (byte >= 48 && byte <= 57) ||
+        (byte >= 65 && byte <= 90) ||
+        (byte >= 97 && byte <= 122) ||
+        byte === 45 ||
+        byte === 95 ||
+        byte === 46 ||
+        byte === 33 ||
+        byte === 126 ||
+        byte === 42 ||
+        byte === 39 ||
+        byte === 40 ||
+        byte === 41
+      ) {
+        uri += String.fromCharCode(byte);
+      } else {
+        uri += `%${byte.toString(16).padStart(2, '0').toUpperCase()}`;
+      }
+    }
+
+    return decodeURIComponent(uri);
+  } catch {
+    return null;
+  }
+}
+
+function safeDecode(value: string): string {
+  let current = value;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const next = decodeURIComponent(current);
+      if (next === current) break;
+      current = next;
+    } catch {
+      break;
+    }
+  }
+  return current;
+}
+
+export function parseThreadKey(key: string): {
+  collectorId: string;
+  cardName: string;
+  set: string;
+} | null {
+  const parts = key.split('|');
+  if (parts.length < 3) return null;
+
+  return {
+    collectorId: parts[0],
+    cardName: parts.slice(1, -1).join('|'),
+    set: parts[parts.length - 1],
+  };
 }
 
 export function parseThreadId(threadId: string): {
@@ -33,20 +113,140 @@ export function parseThreadId(threadId: string): {
   cardName: string;
   set: string;
 } | null {
-  try {
-    const decoded = decodeURIComponent(threadId);
-    const separator = decoded.indexOf('|');
-    const lastSeparator = decoded.lastIndexOf('|');
-    if (separator <= 0 || lastSeparator <= separator) return null;
+  const fromHex = decodeThreadKeyFromRoute(threadId);
+  if (fromHex) return parseThreadKey(fromHex);
 
-    return {
-      collectorId: decoded.slice(0, separator),
-      cardName: decoded.slice(separator + 1, lastSeparator),
-      set: decoded.slice(lastSeparator + 1),
-    };
-  } catch {
+  return parseThreadKey(safeDecode(threadId)) ?? parseThreadKey(threadId);
+}
+
+export function threadHref(thread: {
+  collectorId: string;
+  cardName: string;
+  set: string;
+}) {
+  return {
+    pathname: '/messages/chat' as const,
+    params: {
+      collectorId: thread.collectorId,
+      cardName: thread.cardName,
+      set: thread.set,
+    },
+  };
+}
+
+export function firstSearchParam(value: string | string[] | undefined): string | undefined {
+  if (!value) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export function findThreadByDetails(
+  threads: MessageThread[],
+  messages: TradeMessage[],
+  collectorId: string,
+  cardName: string,
+  set: string
+): MessageThread | null {
+  return findThreadByRouteId(threads, messages, undefined, { collectorId, cardName, set });
+}
+
+export function findThreadByRouteId(
+  threads: MessageThread[],
+  messages: TradeMessage[],
+  routeThreadId: string | string[] | undefined,
+  routeMeta?: {
+    collectorId?: string | string[];
+    cardName?: string | string[];
+    set?: string | string[];
+  }
+): MessageThread | null {
+  const paramCollectorId = firstSearchParam(routeMeta?.collectorId);
+  const paramCardName = firstSearchParam(routeMeta?.cardName);
+  const paramSet = firstSearchParam(routeMeta?.set);
+
+  if (paramCollectorId && paramCardName && paramSet) {
+    const fromParams = threads.find(
+      (thread) =>
+        thread.collectorId === paramCollectorId &&
+        thread.cardName === paramCardName &&
+        thread.set === paramSet
+    );
+    if (fromParams) return fromParams;
+  }
+
+  if (!routeThreadId) {
+    if (paramCollectorId && paramCardName && paramSet) {
+      return buildThreadFromMeta(
+        { collectorId: paramCollectorId, cardName: paramCardName, set: paramSet },
+        messages
+      );
+    }
     return null;
   }
+
+  const raw = Array.isArray(routeThreadId) ? routeThreadId[0] : routeThreadId;
+  const decoded = safeDecode(raw);
+
+  for (const candidate of [raw, decoded, buildThreadIdFromDecoded(decoded)]) {
+    if (!candidate) continue;
+    const match = threads.find((thread) => thread.threadId === candidate);
+    if (match) return match;
+  }
+
+  const meta =
+    parseThreadId(raw) ??
+    parseThreadKey(decoded) ??
+    parseThreadKey(raw) ??
+    (paramCollectorId && paramCardName && paramSet
+      ? { collectorId: paramCollectorId, cardName: paramCardName, set: paramSet }
+      : null);
+
+  if (!meta) return null;
+
+  const existing = threads.find(
+    (thread) =>
+      thread.collectorId === meta.collectorId &&
+      thread.cardName === meta.cardName &&
+      thread.set === meta.set
+  );
+  if (existing) return existing;
+
+  return buildThreadFromMeta(meta, messages);
+}
+
+function buildThreadFromMeta(
+  meta: { collectorId: string; cardName: string; set: string },
+  messages: TradeMessage[]
+): MessageThread | null {
+  const threadMessages = messages
+    .filter(
+      (message) =>
+        message.collectorId === meta.collectorId &&
+        message.cardName === meta.cardName &&
+        message.set === meta.set
+    )
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+  if (threadMessages.length === 0) return null;
+
+  const first = threadMessages[0];
+  return {
+    threadId: buildThreadId(first.collectorId, first.cardName, first.set),
+    collectorId: first.collectorId,
+    collectorName: first.collectorName,
+    cardName: first.cardName,
+    set: first.set,
+    messages: threadMessages,
+    lastMessage: threadMessages[threadMessages.length - 1],
+    unreadCount: threadMessages.filter(
+      (message) => !message.read && message.direction === 'inbound'
+    ).length,
+  };
+}
+
+function buildThreadIdFromDecoded(decoded: string): string | null {
+  const meta = parseThreadKey(decoded);
+  if (!meta) return null;
+  return buildThreadId(meta.collectorId, meta.cardName, meta.set);
 }
 
 export function threadKey(collectorId: string, cardName: string, set: string): string {
@@ -172,6 +372,24 @@ export async function markThreadRead(
     message.set === set
       ? { ...message, read: true }
       : message
+  );
+  await saveMessages(updated);
+  return updated;
+}
+
+export async function deleteThreadMessages(
+  collectorId: string,
+  cardName: string,
+  set: string
+): Promise<TradeMessage[]> {
+  const messages = await loadMessages();
+  const updated = messages.filter(
+    (message) =>
+      !(
+        message.collectorId === collectorId &&
+        message.cardName === cardName &&
+        message.set === set
+      )
   );
   await saveMessages(updated);
   return updated;

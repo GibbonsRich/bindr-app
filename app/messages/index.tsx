@@ -1,19 +1,31 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  TouchableOpacity,
+  View as RNView,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import DeleteThreadButton from '@/components/DeleteThreadButton';
+import MessageChatView from '@/components/MessageChatView';
 import { Text, View } from '@/components/Themed';
 import Colors, { Pokemon } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useMessages } from '@/hooks/useMessages';
-import { collectorInitials, formatInboxTime } from '@/lib/messages';
+import { confirmDeleteThread } from '@/lib/deleteThread';
+import { collectorInitials, formatInboxTime, threadKey } from '@/lib/messages';
 import type { MessageThread } from '@/types/message';
 
 export default function MessagesInboxScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
   const theme = Colors[scheme];
-  const { threads, refreshMessages, unreadCount } = useMessages();
+  const { threads, refreshMessages, unreadCount, deleteThread } = useMessages();
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -21,105 +33,169 @@ export default function MessagesInboxScreen() {
     }, [refreshMessages])
   );
 
+  const activeThread = useMemo(() => {
+    if (!selectedKey) return null;
+    return (
+      threads.find((thread) => threadKey(thread.collectorId, thread.cardName, thread.set) === selectedKey) ??
+      null
+    );
+  }, [selectedKey, threads]);
+
   function openThread(thread: MessageThread) {
-    router.push({
-      pathname: '/messages/[threadId]',
-      params: { threadId: thread.threadId },
+    setSelectedKey(threadKey(thread.collectorId, thread.cardName, thread.set));
+  }
+
+  function closeThread() {
+    setSelectedKey(null);
+  }
+
+  function handleDeleteThread(thread: MessageThread) {
+    confirmDeleteThread(thread, () => {
+      const key = threadKey(thread.collectorId, thread.cardName, thread.set);
+      if (selectedKey === key) {
+        setSelectedKey(null);
+      }
+      void deleteThread(thread.collectorId, thread.cardName, thread.set);
     });
   }
 
   return (
-    <View style={styles.screen} lightColor={theme.background} darkColor={theme.background}>
-      <View style={styles.header} lightColor={theme.surface} darkColor={theme.surface}>
-        <Pressable onPress={() => router.back()} style={styles.backLink}>
-          <Text style={styles.backLinkText}>← Back</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Messages</Text>
-        {unreadCount > 0 ? (
-          <Text style={styles.unreadSummary}>
-            {unreadCount} unread notification{unreadCount === 1 ? '' : 's'}
-          </Text>
-        ) : (
-          <Text style={styles.unreadSummary}>Trade chats with collectors</Text>
-        )}
-      </View>
-
-      {threads.length === 0 ? (
-        <View style={styles.emptyWrap} lightColor="transparent" darkColor="transparent">
-          <View style={styles.empty} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
-            <Text style={styles.emptyTitle}>No messages yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Message a collector from the Match tab to start a trade conversation.
-            </Text>
-          </View>
-        </View>
-      ) : (
-        <FlatList
-          data={threads}
-          keyExtractor={(item) => item.threadId}
-          contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => (
-            <View style={styles.separator} lightColor={theme.border} darkColor={theme.border} />
-          )}
-          renderItem={({ item }) => (
-            <SmsThreadRow thread={item} onPress={() => openThread(item)} />
-          )}
+    <RNView
+      style={[
+        styles.root,
+        { paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: theme.background },
+      ]}>
+      {activeThread ? (
+        <MessageChatView
+          thread={activeThread}
+          onBack={closeThread}
+          onDelete={() => handleDeleteThread(activeThread)}
         />
+      ) : (
+        <View style={styles.screen} lightColor={theme.background} darkColor={theme.background}>
+          <View style={styles.header} lightColor={theme.surface} darkColor={theme.surface}>
+            <Pressable onPress={() => router.back()} style={styles.backLink}>
+              <Text style={styles.backLinkText}>← Back</Text>
+            </Pressable>
+            <Text style={styles.headerTitle}>Messages</Text>
+            {unreadCount > 0 ? (
+              <Text style={styles.unreadSummary}>
+                {unreadCount} unread notification{unreadCount === 1 ? '' : 's'}
+              </Text>
+            ) : (
+              <Text style={styles.unreadSummary}>Trade chats with collectors</Text>
+            )}
+          </View>
+
+          {threads.length === 0 ? (
+            <View style={styles.emptyWrap} lightColor="transparent" darkColor="transparent">
+              <View
+                style={styles.empty}
+                lightColor={Colors.light.surfaceAlt}
+                darkColor={Colors.dark.surfaceAlt}>
+                <Text style={styles.emptyTitle}>No messages yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  Message a collector from the Match tab to start a trade conversation.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <FlatList
+              style={styles.listFlex}
+              data={threads}
+              keyExtractor={(item) => threadKey(item.collectorId, item.cardName, item.set)}
+              contentContainerStyle={styles.list}
+              keyboardShouldPersistTaps="always"
+              renderItem={({ item }) => (
+                <SmsThreadRow
+                  thread={item}
+                  onPress={() => openThread(item)}
+                  onDelete={() => handleDeleteThread(item)}
+                />
+              )}
+              ItemSeparatorComponent={() => (
+                <View style={styles.separator} lightColor={theme.border} darkColor={theme.border} />
+              )}
+            />
+          )}
+        </View>
       )}
-    </View>
+    </RNView>
   );
 }
 
-function SmsThreadRow({ thread, onPress }: { thread: MessageThread; onPress: () => void }) {
+function SmsThreadRow({
+  thread,
+  onPress,
+  onDelete,
+}: {
+  thread: MessageThread;
+  onPress: () => void;
+  onDelete: () => void;
+}) {
   const unread = thread.unreadCount > 0;
   const previewPrefix = thread.lastMessage.direction === 'outbound' ? 'You: ' : '';
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-      accessibilityRole="button"
-      accessibilityLabel={`Open chat with ${thread.collectorName}`}>
-      <View style={styles.avatarWrap} lightColor="transparent" darkColor="transparent">
-        {unread ? <View style={styles.unreadDot} /> : null}
-        <View style={styles.avatar} lightColor={Pokemon.blue} darkColor={Pokemon.blue}>
-          <Text style={styles.avatarText}>{collectorInitials(thread.collectorName)}</Text>
-        </View>
-      </View>
-
-      <View style={styles.rowBody} lightColor="transparent" darkColor="transparent">
-        <View style={styles.rowTop} lightColor="transparent" darkColor="transparent">
-          <Text style={[styles.rowName, unread && styles.rowNameUnread]} numberOfLines={1}>
-            {thread.collectorName}
-          </Text>
-          <Text style={[styles.rowTime, unread && styles.rowTimeUnread]}>
-            {formatInboxTime(thread.lastMessage.createdAt)}
-          </Text>
-        </View>
-        <Text style={styles.rowMeta} numberOfLines={1}>
-          {thread.cardName} · {thread.set}
-        </Text>
-        <View style={styles.rowPreviewLine} lightColor="transparent" darkColor="transparent">
-          <Text
-            style={[styles.rowPreview, unread && styles.rowPreviewUnread]}
-            numberOfLines={2}>
-            {previewPrefix}
-            {thread.lastMessage.body}
-          </Text>
-          {unread ? (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText}>{thread.unreadCount}</Text>
+    <RNView style={styles.rowContainer}>
+      <TouchableOpacity
+        activeOpacity={0.72}
+        onPress={onPress}
+        style={styles.rowMain}
+        accessibilityRole="button"
+        accessibilityLabel={`Open chat with ${thread.collectorName}`}>
+        <RNView pointerEvents="none" style={styles.row}>
+          <View style={styles.avatarWrap} lightColor="transparent" darkColor="transparent">
+            {unread ? <RNView style={styles.unreadDot} /> : null}
+            <View style={styles.avatar} lightColor={Pokemon.blue} darkColor={Pokemon.blue}>
+              <Text style={styles.avatarText}>{collectorInitials(thread.collectorName)}</Text>
             </View>
-          ) : null}
-        </View>
-      </View>
-    </Pressable>
+          </View>
+
+          <View style={styles.rowBody} lightColor="transparent" darkColor="transparent">
+            <View style={styles.rowTop} lightColor="transparent" darkColor="transparent">
+              <Text style={[styles.rowName, unread && styles.rowNameUnread]} numberOfLines={1}>
+                {thread.collectorName}
+              </Text>
+              <Text style={[styles.rowTime, unread && styles.rowTimeUnread]}>
+                {formatInboxTime(thread.lastMessage.createdAt)}
+              </Text>
+            </View>
+            <Text style={styles.rowMeta} numberOfLines={1}>
+              {thread.cardName} · {thread.set}
+            </Text>
+            <RNView style={styles.rowPreviewLine}>
+              <Text
+                style={[styles.rowPreview, unread && styles.rowPreviewUnread]}
+                numberOfLines={2}>
+                {previewPrefix}
+                {thread.lastMessage.body}
+              </Text>
+              {unread ? (
+                <RNView style={styles.unreadBadge}>
+                  <Text style={styles.unreadBadgeText}>{thread.unreadCount}</Text>
+                </RNView>
+              ) : null}
+            </RNView>
+          </View>
+        </RNView>
+      </TouchableOpacity>
+      <DeleteThreadButton
+        onPress={onDelete}
+        accessibilityLabel={`Delete chat with ${thread.collectorName}`}
+      />
+    </RNView>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    minHeight: 0,
+  },
   screen: {
     flex: 1,
+    minHeight: 0,
   },
   header: {
     paddingBottom: 14,
@@ -147,15 +223,24 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 24,
   },
+  listFlex: {
+    flex: 1,
+    minHeight: 0,
+  },
+  rowContainer: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingRight: 8,
+  },
+  rowMain: {
+    flex: 1,
+  },
   row: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-  },
-  rowPressed: {
-    opacity: 0.88,
   },
   avatarWrap: {
     alignItems: 'center',
