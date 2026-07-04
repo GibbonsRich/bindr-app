@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View as RNView } from 'react-native';
 
 import AppHeading from '@/components/AppHeading';
+import CardImage from '@/components/CardImage';
 import PageHeader from '@/components/PageHeader';
 import { Text, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -11,6 +12,7 @@ import Colors from '@/constants/Colors';
 import { useCurrency } from '@/hooks/useCurrency';
 import { showAlert } from '@/lib/alert';
 import { loadPortfolio, loadWishlist } from '@/lib/storage';
+import type { PokemonCard } from '@/types/card';
 
 type IconName = {
   ios: string;
@@ -84,6 +86,7 @@ export default function HomeScreen() {
   const [cardCount, setCardCount] = useState(0);
   const [collectionValue, setCollectionValue] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [topCard, setTopCard] = useState<PokemonCard | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -98,6 +101,12 @@ export default function HomeScreen() {
           portfolio.reduce((sum, card) => sum + card.estimatedValue * card.quantity, 0)
         );
         setWishlistCount(wishlist.length);
+        setTopCard(
+          portfolio.reduce<PokemonCard | null>((best, card) => {
+            if (!best || card.estimatedValue > best.estimatedValue) return card;
+            return best;
+          }, null)
+        );
       })();
 
       return () => {
@@ -123,35 +132,56 @@ export default function HomeScreen() {
         description="Scan, track, and trade Pokemon cards — all from your pocket."
       />
 
-      <Pressable
-        onPress={() => router.push(hasCollection ? '/portfolio' : '/scan')}
-        style={({ pressed }) => [pressed && styles.pressed]}>
-        <View style={styles.hero} lightColor={theme.surface} darkColor={theme.surface}>
-          <RNView style={[styles.heroBadge, { backgroundColor: theme.actionMuted }]}>
-            <Text style={[styles.heroBadgeText, { color: theme.actionMutedText }]}>
-              {hasCollection ? 'Your collection' : 'Get started'}
+      <View style={styles.hero} lightColor={theme.surface} darkColor={theme.surface}>
+        <RNView style={styles.heroRow}>
+          <Pressable
+            onPress={() => router.push(hasCollection ? '/portfolio' : '/scan')}
+            style={({ pressed }) => [styles.heroCopy, pressed && styles.pressed]}>
+            <RNView style={[styles.heroBadge, { backgroundColor: theme.actionMuted }]}>
+              <Text style={[styles.heroBadgeText, { color: theme.actionMutedText }]}>
+                {hasCollection ? 'Your collection' : 'Get started'}
+              </Text>
+            </RNView>
+            <AppHeading style={styles.heroTitle}>
+              {hasCollection ? formatMoney(collectionValue) : 'Build your digital binder'}
+            </AppHeading>
+            <Text style={styles.heroSubtitle}>
+              {hasCollection
+                ? `${cardCount} card${cardCount === 1 ? '' : 's'} tracked · ${wishlistCount} on wishlist`
+                : 'Scan a card to grade condition, estimate value, and add it to your portfolio.'}
             </Text>
-          </RNView>
-          <AppHeading style={styles.heroTitle}>
-            {hasCollection ? formatMoney(collectionValue) : 'Build your digital binder'}
-          </AppHeading>
-          <Text style={styles.heroSubtitle}>
-            {hasCollection
-              ? `${cardCount} card${cardCount === 1 ? '' : 's'} tracked · ${wishlistCount} on wishlist`
-              : 'Scan a card to grade condition, estimate value, and add it to your portfolio.'}
-          </Text>
-          <RNView style={[styles.heroCta, { backgroundColor: theme.action }]}>
-            <Text style={[styles.heroCtaText, { color: theme.actionText }]}>
-              {hasCollection ? 'Open portfolio' : 'Scan your first card'}
-            </Text>
-            <SymbolView
-              name={{ ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' }}
-              tintColor={theme.actionText}
-              size={16}
-            />
-          </RNView>
-        </View>
-      </Pressable>
+            <RNView style={[styles.heroCta, { backgroundColor: theme.action }]}>
+              <Text style={[styles.heroCtaText, { color: theme.actionText }]}>
+                {hasCollection ? 'Open portfolio' : 'Scan your first card'}
+              </Text>
+              <SymbolView
+                name={{ ios: 'arrow.right', android: 'arrow_forward', web: 'arrow_forward' }}
+                tintColor={theme.actionText}
+                size={16}
+              />
+            </RNView>
+          </Pressable>
+
+          {hasCollection && topCard ? (
+            <Pressable
+              onPress={() => router.push(`/portfolio/${topCard.id}`)}
+              style={({ pressed }) => [styles.heroCard, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`View ${topCard.name}, top card in your portfolio`}>
+              <CardImage
+                name={topCard.name}
+                set={topCard.set}
+                imageUri={topCard.imageUri}
+                size="md"
+              />
+              <Text style={styles.heroCardName} numberOfLines={1}>
+                {topCard.name}
+              </Text>
+              <Text style={styles.heroCardValue}>{formatMoney(topCard.estimatedValue)}</Text>
+            </Pressable>
+          ) : null}
+        </RNView>
+      </View>
 
       <Text style={[styles.sectionLabel, styles.quickSectionLabel]}>Quick actions</Text>
       <View style={styles.quickGrid} lightColor="transparent" darkColor="transparent">
@@ -260,6 +290,34 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 28,
     padding: 20,
+  },
+  heroRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 16,
+  },
+  heroCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  heroCard: {
+    alignItems: 'center',
+    flexShrink: 0,
+    maxWidth: 88,
+  },
+  heroCardName: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 8,
+    opacity: 0.85,
+    textAlign: 'center',
+  },
+  heroCardValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 2,
+    opacity: 0.72,
+    textAlign: 'center',
   },
   heroBadge: {
     alignSelf: 'flex-start',

@@ -10,6 +10,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { CurrencyProvider } from '@/hooks/useCurrency';
 import { MessagesProvider } from '@/hooks/useMessages';
 import { ThemePreferenceProvider } from '@/hooks/useThemePreference';
+import { useWebAppShell } from '@/hooks/useWebAppShell';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -53,6 +54,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  useWebAppShell();
 
   return (
     <InAppNotificationProvider>

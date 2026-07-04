@@ -31,7 +31,13 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Bindr",
+      "shortName": "Bindr",
+      "display": "standalone",
+      "themeColor": "#1B2B5A",
+      "backgroundColor": "#EAF4FC",
+      "orientation": "portrait"
     },
     "plugins": [
       "expo-router",

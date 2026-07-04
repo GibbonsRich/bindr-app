@@ -1,19 +1,31 @@
 import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
-import { Platform } from 'react-native';
+import { StyleSheet, View as RNView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import GlassTabBarBackground from '@/components/GlassTabBarBackground';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 
-const TAB_BAR_HEIGHT = 64;
-const TAB_BAR_FLOAT = 16;
+const TAB_BAR_HEIGHT = 68;
+
+type TabIconName = {
+  ios: string;
+  android: string;
+  web: string;
+};
+
+function TabIcon({ name, color }: { name: TabIconName; color: string }) {
+  return (
+    <RNView style={styles.tabIconWrap}>
+      <SymbolView name={name} tintColor={color} size={24} />
+    </RNView>
+  );
+}
 
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
   const insets = useSafeAreaInsets();
-  const bottomOffset = Math.max(insets.bottom, 12) + TAB_BAR_FLOAT;
+  const bottomOffset = Math.max(insets.bottom, 6);
   const theme = Colors[colorScheme];
 
   return (
@@ -21,34 +33,42 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: theme.tint,
         tabBarInactiveTintColor: theme.tabIconDefault,
-        tabBarBackground: () => <GlassTabBarBackground />,
         tabBarStyle: {
           position: 'absolute',
           bottom: bottomOffset,
-          left: 16,
-          right: 16,
+          left: 0,
+          right: 0,
           height: TAB_BAR_HEIGHT,
-          borderRadius: 24,
           borderTopWidth: 0,
           backgroundColor: 'transparent',
           elevation: 0,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: Platform.OS === 'ios' ? 0.14 : 0.1,
-          shadowRadius: 16,
-          overflow: 'hidden',
+          shadowOpacity: 0,
+          overflow: 'visible',
+          paddingTop: 0,
+          paddingBottom: 0,
         },
         tabBarItemStyle: {
-          paddingTop: 8,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingTop: 3,
+          paddingBottom: 0,
+          height: TAB_BAR_HEIGHT,
+        },
+        tabBarIconStyle: {
+          marginTop: 2,
+          marginBottom: 0,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
-          marginBottom: 4,
+          marginTop: 3,
+          marginBottom: 0,
+          paddingBottom: 0,
+          lineHeight: 13,
         },
         sceneStyle: {
           backgroundColor: theme.background,
-          paddingBottom: bottomOffset + TAB_BAR_HEIGHT + 12,
+          paddingBottom: bottomOffset + TAB_BAR_HEIGHT + 8,
         },
         headerShown: false,
       }}>
@@ -57,14 +77,13 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <TabIcon
               name={{
                 ios: 'house.fill',
                 android: 'home',
                 web: 'home',
               }}
-              tintColor={color}
-              size={26}
+              color={color}
             />
           ),
         }}
@@ -74,14 +93,13 @@ export default function TabLayout() {
         options={{
           title: 'Search',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <TabIcon
               name={{
                 ios: 'magnifyingglass',
                 android: 'search',
                 web: 'search',
               }}
-              tintColor={color}
-              size={26}
+              color={color}
             />
           ),
         }}
@@ -91,14 +109,13 @@ export default function TabLayout() {
         options={{
           title: 'Scan',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <TabIcon
               name={{
                 ios: 'camera.viewfinder',
                 android: 'camera',
                 web: 'camera',
               }}
-              tintColor={color}
-              size={26}
+              color={color}
             />
           ),
         }}
@@ -108,14 +125,13 @@ export default function TabLayout() {
         options={{
           title: 'Portfolio',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <TabIcon
               name={{
                 ios: 'chart.line.uptrend.xyaxis',
                 android: 'trending_up',
                 web: 'trending_up',
               }}
-              tintColor={color}
-              size={26}
+              color={color}
             />
           ),
         }}
@@ -125,14 +141,13 @@ export default function TabLayout() {
         options={{
           title: 'Trade',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <TabIcon
               name={{
                 ios: 'location.fill',
                 android: 'location_on',
                 web: 'location_on',
               }}
-              tintColor={color}
-              size={26}
+              color={color}
             />
           ),
         }}
@@ -142,14 +157,13 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => (
-            <SymbolView
+            <TabIcon
               name={{
                 ios: 'person.fill',
                 android: 'person',
                 web: 'person',
               }}
-              tintColor={color}
-              size={26}
+              color={color}
             />
           ),
         }}
@@ -157,3 +171,12 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabIconWrap: {
+    alignItems: 'center',
+    height: 26,
+    justifyContent: 'center',
+    width: 26,
+  },
+});

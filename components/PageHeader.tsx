@@ -35,12 +35,14 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
+    lineHeight: 34,
+    marginBottom: 0,
   },
   tagline: {
     fontSize: 16,
     fontStyle: 'italic',
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 0,
     opacity: 0.85,
   },
   description: {
