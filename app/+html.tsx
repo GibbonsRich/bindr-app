@@ -32,7 +32,7 @@ import { Pokemon } from '@/constants/Colors';
 
 const responsiveBackground = `
 body {
-  background-color: ${Pokemon.cream};
+  background-color: ${Pokemon.bluePale};
   color-scheme: light;
 }
 `;

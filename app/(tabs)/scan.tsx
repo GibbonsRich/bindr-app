@@ -1,6 +1,6 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -26,6 +26,7 @@ import { addToPortfolio } from '@/lib/storage';
 import type { PokemonCard, ScanResult } from '@/types/card';
 
 type ScanSide = 'front' | 'back';
+type ScanStep = 'front' | 'back' | 'done';
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -33,8 +34,10 @@ export default function ScanScreen() {
   const theme = Colors[scheme];
   const { formatMoney } = useCurrency();
   const cameraRef = useRef<CameraView>(null);
+  const preserveSessionRef = useRef(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
+  const [scanStep, setScanStep] = useState<ScanStep>('front');
   const [scanSide, setScanSide] = useState<ScanSide>('front');
   const [cameraReady, setCameraReady] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -43,10 +46,31 @@ export default function ScanScreen() {
   const [saving, setSaving] = useState(false);
   const isWeb = Platform.OS === 'web';
 
-  const hasFront = Boolean(result?.card.imageUri);
-  const hasBack = Boolean(result?.card.backImageUri ?? backImageUri);
+  const hasFront = scanStep !== 'front';
+  const hasBack = scanStep === 'done';
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (preserveSessionRef.current) {
+          preserveSessionRef.current = false;
+          return;
+        }
+
+        setScanning(false);
+        setScanStep('front');
+        setScanSide('front');
+        setResult(null);
+        setBackImageUri(null);
+        setPreviewId(null);
+      };
+    }, [])
+  );
 
   function resetScanSession() {
+    setScanning(false);
+    setScanStep('front');
+    setScanSide('front');
     setResult(null);
     setBackImageUri(null);
     setPreviewId(null);
@@ -66,8 +90,8 @@ export default function ScanScreen() {
 
   async function scanFrontFromUri(uri: string) {
     setScanning(true);
-    const preservedBack = backImageUri ?? result?.card.backImageUri ?? null;
     setPreviewId(null);
+    setBackImageUri(null);
 
     try {
       const analysis = await analyzeCardImage(uri);
@@ -76,11 +100,8 @@ export default function ScanScreen() {
         card: {
           ...analysis.card,
           imageUri: uri,
-          backImageUri: preservedBack ?? undefined,
         },
       });
-      if (preservedBack) setBackImageUri(preservedBack);
-      else setBackImageUri(null);
     } catch (error) {
       const message =
         error instanceof ScanAnalysisError
@@ -89,6 +110,7 @@ export default function ScanScreen() {
             ? error.message
             : 'Could not analyze the card. Try again with better lighting.';
       showAlert('Scan failed', message);
+      throw error;
     } finally {
       setScanning(false);
     }
@@ -104,6 +126,7 @@ export default function ScanScreen() {
       const message =
         error instanceof Error ? error.message : 'Could not save the back photo. Try again.';
       showAlert('Scan failed', message);
+      throw error;
     } finally {
       setScanning(false);
     }
@@ -123,42 +146,33 @@ export default function ScanScreen() {
     return photo.uri;
   }
 
-  async function handleScanFront() {
-    if (scanning) return;
+  async function handleScan() {
+    if (scanning || scanStep === 'done') return;
 
-    setScanSide('front');
+    const side: ScanSide = scanStep === 'front' ? 'front' : 'back';
+    setScanSide(side);
 
     try {
       const uri = await capturePhoto();
-      await scanFrontFromUri(uri);
+
+      if (scanStep === 'front') {
+        await scanFrontFromUri(uri);
+        setScanStep('back');
+        setScanSide('back');
+      } else {
+        await scanBackFromUri(uri);
+        setScanStep('done');
+      }
     } catch (error) {
       const message =
         error instanceof ScanAnalysisError
           ? error.message
           : error instanceof Error
             ? error.message
-            : 'Could not capture or analyze the card. Try again with better lighting.';
+            : scanStep === 'front'
+              ? 'Could not capture or analyze the card. Try again with better lighting.'
+              : 'Could not capture the back photo. Try again with better lighting.';
       showAlert('Scan failed', message);
-      setScanning(false);
-    }
-  }
-
-  async function handleScanBack() {
-    if (scanning) return;
-
-    setScanSide('back');
-    setScanning(true);
-
-    try {
-      const uri = await capturePhoto();
-      await scanBackFromUri(uri);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Could not capture the back photo. Try again with better lighting.';
-      showAlert('Scan failed', message);
-    } finally {
       setScanning(false);
     }
   }
@@ -181,6 +195,7 @@ export default function ScanScreen() {
     setScanPreviewCard(id, buildPreviewCard(result, id));
     if (!previewId) setPreviewId(id);
 
+    preserveSessionRef.current = true;
     router.push({
       pathname: '/portfolio/[id]',
       params: { id, from: 'scan' },
@@ -195,7 +210,6 @@ export default function ScanScreen() {
       await addToPortfolio(buildPreviewCard(result, `card-${Date.now()}`));
       showSuccess('Added', `${result.card.name} was added to your portfolio.`);
       resetScanSession();
-      setBackImageUri(null);
     } finally {
       setSaving(false);
     }
@@ -235,22 +249,24 @@ export default function ScanScreen() {
     );
   }
 
-  const scanDisabled = scanning || !cameraReady;
+  const scanDisabled = scanning || !cameraReady || scanStep === 'done';
   const overlayText = scanning
     ? scanSide === 'front'
       ? 'Analyzing front…'
       : 'Capturing back…'
     : !cameraReady
       ? 'Starting camera…'
-      : scanSide === 'front'
-        ? 'Align the front of your card'
-        : 'Flip the card and align the back';
+      : scanStep === 'front'
+        ? 'Step 1 — align the front of your card'
+        : scanStep === 'back'
+          ? 'Step 2 — flip the card and align the back'
+          : 'Scan complete';
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <PageHeader
         title="Scan"
-        description="Scan the front to identify and grade your card, then scan the back to save both sides."
+        description="Scan the front, then the back in order. Leaving this page resets the scan."
       />
 
       <View style={styles.demoBox} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
@@ -258,8 +274,8 @@ export default function ScanScreen() {
       </View>
 
       <View style={styles.scanStatusRow} lightColor="transparent" darkColor="transparent">
-        <ScanStatusChip label="Front" captured={hasFront} active={scanSide === 'front'} />
-        <ScanStatusChip label="Back" captured={hasBack} active={scanSide === 'back'} />
+        <ScanStatusChip label="1. Front" captured={hasFront} active={scanStep === 'front'} />
+        <ScanStatusChip label="2. Back" captured={hasBack} active={scanStep === 'back'} />
       </View>
 
       <View style={styles.cameraFrame} lightColor="#000" darkColor="#000">
@@ -281,43 +297,42 @@ export default function ScanScreen() {
         )}
       </View>
 
-      <View style={styles.scanActions}>
+      {scanStep !== 'done' ? (
         <Pressable
           style={[
             styles.primaryButton,
-            styles.scanActionButton,
             { backgroundColor: theme.action },
             scanDisabled && styles.disabled,
           ]}
-          onPress={handleScanFront}
+          onPress={handleScan}
           disabled={scanDisabled}>
           <Text style={[styles.primaryButtonText, { color: theme.actionText }]}>
-            {scanning && scanSide === 'front' ? 'Scanning front…' : 'Scan front of card'}
+            {scanning
+              ? scanStep === 'front'
+                ? 'Scanning front…'
+                : 'Scanning back…'
+              : scanStep === 'front'
+                ? 'Scan front of card'
+                : 'Scan back of card'}
           </Text>
         </Pressable>
-
+      ) : (
         <Pressable
-          style={[
-            styles.outlineButton,
-            styles.scanActionButton,
-            { borderColor: theme.border },
-            scanDisabled && styles.disabled,
-          ]}
-          onPress={handleScanBack}
-          disabled={scanDisabled}>
-          <Text style={[styles.outlineButtonText, { color: theme.link }]}>
-            {scanning && scanSide === 'back' ? 'Scanning back…' : 'Scan back of card'}
-          </Text>
+          style={[styles.outlineButton, { borderColor: theme.border }]}
+          onPress={resetScanSession}>
+          <Text style={[styles.outlineButtonText, { color: theme.link }]}>Scan another card</Text>
         </Pressable>
-      </View>
+      )}
 
-      {!hasFront && hasBack ? (
+      {scanStep === 'back' && result && !scanning ? (
         <View style={styles.pendingBack} lightColor={Colors.light.surfaceAlt} darkColor={Colors.dark.surfaceAlt}>
-          <Text style={styles.pendingBackText}>Back photo saved — scan the front to identify this card.</Text>
+          <Text style={styles.pendingBackText}>
+            Front captured — {result.card.name}. Now scan the back to finish.
+          </Text>
         </View>
       ) : null}
 
-      {result ? (
+      {scanStep === 'done' && result ? (
         <View style={styles.resultWrap}>
           <View style={styles.previewPhotos} lightColor="transparent" darkColor="transparent">
             <MiniPhoto label="Front" captured={hasFront} />
@@ -502,12 +517,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     textAlign: 'center',
-  },
-  scanActions: {
-    gap: 10,
-  },
-  scanActionButton: {
-    marginTop: 0,
   },
   primaryButton: {
     alignItems: 'center',

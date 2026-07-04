@@ -6,12 +6,12 @@ import { Pokemon } from '@/constants/Colors';
 import type { CardCondition } from '@/types/card';
 
 const LIGHT_COLORS: Record<CardCondition, string> = {
-  Mint: Pokemon.gbLight,
-  'Near Mint': '#8BAC0F',
+  Mint: Pokemon.blueLight,
+  'Near Mint': '#A8D8F0',
   Excellent: Pokemon.yellow,
-  Good: '#E8985E',
+  Good: '#F0C89A',
   Played: Pokemon.red,
-  Poor: Pokemon.gbMid,
+  Poor: Pokemon.navy,
 };
 
 const DARK_COLORS: Record<CardCondition, string> = {
@@ -25,8 +25,9 @@ const DARK_COLORS: Record<CardCondition, string> = {
 
 const LIGHT_TEXT_COLORS: Partial<Record<CardCondition, string>> = {
   Excellent: Pokemon.navy,
-  Mint: Pokemon.gbDark,
-  'Near Mint': Pokemon.gbDark,
+  Mint: Pokemon.navy,
+  'Near Mint': Pokemon.navy,
+  Good: Pokemon.navy,
 };
 
 type Props = {
@@ -37,7 +38,7 @@ export default function ConditionBadge({ condition }: Props) {
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
   const backgroundColor = isDark ? DARK_COLORS[condition] : LIGHT_COLORS[condition];
-  const textColor = isDark ? '#000000' : (LIGHT_TEXT_COLORS[condition] ?? '#FFFFFF');
+  const textColor = isDark ? '#000000' : (LIGHT_TEXT_COLORS[condition] ?? Pokemon.white);
 
   return (
     <View style={[styles.badge, { backgroundColor }]}>

@@ -1,15 +1,23 @@
-/** Gen 1 / Game Boy–inspired nostalgic Pokemon palette */
+/** Classic Pokemon TCG card-back palette */
 export const Pokemon = {
-  red: '#CC0000',
-  blue: '#3B4CCA',
-  yellow: '#FFDE00',
-  cream: '#FFF8E7',
-  parchment: '#F7E0B0',
-  navy: '#1D2C5E',
-  gbLight: '#9BBC0F',
-  gbMid: '#306230',
-  gbDark: '#0F380F',
-  tan: '#C4A574',
+  red: '#D42027',
+  blue: '#3B5CA9',
+  blueLight: '#7EC8E8',
+  bluePale: '#EAF4FC',
+  blueSky: '#C5E3F6',
+  yellow: '#FFCB05',
+  navy: '#1B2B5A',
+  navyDeep: '#0F1D47',
+  white: '#FFFFFF',
+  blueMuted: '#6B8FB8',
+  /** @deprecated use bluePale */
+  cream: '#EAF4FC',
+  /** @deprecated use white */
+  parchment: '#FFFFFF',
+  tan: '#6B8FB8',
+  gbLight: '#C5E3F6',
+  gbMid: '#1B2B5A',
+  gbDark: '#1B2B5A',
 } as const;
 
 export const Mono = {
@@ -23,35 +31,33 @@ export const Mono = {
   gray600: '#BBBBBB',
 } as const;
 
-const tintColorLight = Pokemon.red;
-
 export default {
   light: {
     text: Pokemon.navy,
-    background: Pokemon.cream,
-    tint: tintColorLight,
-    tabIconDefault: Pokemon.tan,
-    tabIconSelected: tintColorLight,
-    surface: Pokemon.parchment,
-    surfaceAlt: '#FFE8A3',
+    background: Pokemon.bluePale,
+    tint: Pokemon.navy,
+    tabIconDefault: Pokemon.blueMuted,
+    tabIconSelected: Pokemon.navy,
+    surface: Pokemon.white,
+    surfaceAlt: Pokemon.blueSky,
     accent: Pokemon.blue,
     highlight: Pokemon.yellow,
-    border: Pokemon.blue,
-    heading: Pokemon.red,
+    border: '#9DC6E8',
+    heading: Pokemon.navy,
     link: Pokemon.blue,
-    action: Pokemon.blue,
-    actionText: '#FFFFFF',
-    actionMuted: Pokemon.gbLight,
-    actionMutedText: Pokemon.gbDark,
+    action: Pokemon.yellow,
+    actionText: Pokemon.navy,
+    actionMuted: Pokemon.blueSky,
+    actionMutedText: Pokemon.navy,
     danger: Pokemon.red,
-    dangerText: '#FFFFFF',
+    dangerText: Pokemon.white,
     bubbleMine: Pokemon.blue,
-    bubbleMineText: '#FFFFFF',
+    bubbleMineText: Pokemon.white,
     spinner: Pokemon.red,
-    chartUp: Pokemon.gbLight,
+    chartUp: Pokemon.blue,
     chartDown: Pokemon.red,
     avatar: Pokemon.blue,
-    avatarText: '#FFFFFF',
+    avatarText: Pokemon.white,
   },
   dark: {
     text: Mono.white,

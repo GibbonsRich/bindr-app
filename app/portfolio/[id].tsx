@@ -7,7 +7,8 @@ import CardDetailView from '@/components/CardDetailView';
 import HeaderActions from '@/components/HeaderActions';
 import ScreenNotifications from '@/components/ScreenNotifications';
 import { Text, View } from '@/components/Themed';
-import { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { useCurrency } from '@/hooks/useCurrency';
 import { getCardMarketData } from '@/lib/cardMarket';
 import { getScanPreviewCard } from '@/lib/scanPreview';
@@ -16,6 +17,8 @@ import type { PokemonCard } from '@/types/card';
 
 export default function PortfolioCardDetailScreen() {
   const router = useRouter();
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const { formatMoney } = useCurrency();
   const [card, setCard] = useState<PokemonCard | null>(null);
@@ -55,7 +58,7 @@ export default function PortfolioCardDetailScreen() {
     return (
       <ScreenNotifications>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Pokemon.red} />
+          <ActivityIndicator size="large" color={theme.spinner} />
         </View>
       </ScreenNotifications>
     );
@@ -66,8 +69,10 @@ export default function PortfolioCardDetailScreen() {
       <ScreenNotifications>
         <View style={styles.centered}>
           <AppHeading style={styles.emptyTitle}>Card not found</AppHeading>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Go back</Text>
+          <Pressable
+            onPress={() => router.back()}
+            style={[styles.backButton, { backgroundColor: theme.action }]}>
+            <Text style={[styles.backButtonText, { color: theme.actionText }]}>Go back</Text>
           </Pressable>
         </View>
       </ScreenNotifications>
@@ -98,13 +103,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   backButton: {
-    backgroundColor: Pokemon.blue,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   backButtonText: {
-    color: '#fff',
     fontWeight: '700',
   },
 });

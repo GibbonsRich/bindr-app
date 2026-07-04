@@ -8,7 +8,8 @@ import PageHeader from '@/components/PageHeader';
 import PortfolioChart from '@/components/PortfolioChart';
 import ScreenNotifications from '@/components/ScreenNotifications';
 import { Text, View } from '@/components/Themed';
-import Colors, { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { useCurrency } from '@/hooks/useCurrency';
 import { confirmAction } from '@/lib/alert';
 import { loadPortfolio, removeFromPortfolio } from '@/lib/storage';
@@ -16,6 +17,8 @@ import type { PokemonCard } from '@/types/card';
 
 export default function PortfolioScreen() {
   const router = useRouter();
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
   const [cards, setCards] = useState<PokemonCard[]>([]);
   const [loading, setLoading] = useState(true);
   const { currency, setCurrency, formatMoney } = useCurrency();
@@ -59,7 +62,7 @@ export default function PortfolioScreen() {
     return (
       <ScreenNotifications>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Pokemon.red} />
+          <ActivityIndicator size="large" color={theme.spinner} />
         </View>
       </ScreenNotifications>
     );
@@ -121,7 +124,7 @@ export default function PortfolioScreen() {
                   hitSlop={8}
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${item.name}`}>
-                  <Text style={styles.remove}>Remove</Text>
+                  <Text style={[styles.remove, { color: theme.danger }]}>Remove</Text>
                 </Pressable>
               }
             />
@@ -175,9 +178,9 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   remove: {
-    color: Pokemon.red,
     fontSize: 13,
     fontWeight: '600',
+    lineHeight: 20,
   },
   empty: {
     alignItems: 'center',

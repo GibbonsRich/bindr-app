@@ -145,15 +145,14 @@ export default function MatchScreen() {
             key={option}
             style={[
               styles.radiusChip,
-              { borderColor: theme.action },
+              { borderColor: active ? theme.action : theme.accent },
               active && { backgroundColor: theme.action },
             ]}
             onPress={() => setRadius(option)}>
             <Text
               style={[
                 styles.radiusText,
-                { color: theme.action },
-                active && { color: theme.actionText },
+                { color: active ? theme.actionText : theme.accent },
               ]}>
               {option} mi
             </Text>

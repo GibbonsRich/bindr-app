@@ -6,13 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppHeading from '@/components/AppHeading';
 import MessageChatView from '@/components/MessageChatView';
 import { Text } from '@/components/Themed';
-import { Pokemon } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { useMessages } from '@/hooks/useMessages';
 import { confirmDeleteThread } from '@/lib/deleteThread';
 import { findThreadByDetails, firstSearchParam } from '@/lib/messages';
 
 export default function MessageChatScreen() {
   const router = useRouter();
+  const scheme = useColorScheme() ?? 'light';
+  const theme = Colors[scheme];
   const insets = useSafeAreaInsets();
   const { threads, messages, refreshMessages, deleteThread } = useMessages();
   const params = useLocalSearchParams<{
@@ -48,8 +51,10 @@ export default function MessageChatScreen() {
     return (
       <RNView style={[styles.centered, { paddingTop: insets.top }]}>
         <AppHeading style={styles.errorTitle}>Conversation not found</AppHeading>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Back to messages</Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={[styles.backButton, { backgroundColor: theme.action }]}>
+          <Text style={[styles.backButtonText, { color: theme.actionText }]}>Back to messages</Text>
         </Pressable>
       </RNView>
     );
@@ -82,13 +87,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   backButton: {
-    backgroundColor: Pokemon.blue,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   backButtonText: {
-    color: '#fff',
     fontWeight: '700',
   },
 });

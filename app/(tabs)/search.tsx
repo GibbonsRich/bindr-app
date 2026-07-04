@@ -80,7 +80,7 @@ export default function SearchScreen() {
           value={query}
           onChangeText={setQuery}
           placeholder="Search by name, set, or rarity…"
-          placeholderTextColor={scheme === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(29,45,94,0.45)'}
+          placeholderTextColor={scheme === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(27,43,90,0.45)'}
           style={[styles.searchInput, { color: theme.text }]}
           autoCapitalize="none"
           autoCorrect={false}

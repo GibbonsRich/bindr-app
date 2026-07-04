@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import AppHeading from '@/components/AppHeading';
@@ -5,9 +6,11 @@ import CardGradePanel from '@/components/CardGradePanel';
 import CardImage from '@/components/CardImage';
 import CardPriceChart from '@/components/CardPriceChart';
 import ConditionBadge from '@/components/ConditionBadge';
+import FullscreenPhotoViewer from '@/components/FullscreenPhotoViewer';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { getCardBackImageUri, getCardImageUri } from '@/lib/cardArt';
 import { getCardGrade } from '@/lib/cardGrade';
 import { formatSaleDate, type CardMarketData } from '@/lib/cardMarket';
 import type { CardCondition, PokemonCard } from '@/types/card';
@@ -32,8 +35,21 @@ export default function CardDetailView({
   const scheme = useColorScheme() ?? 'light';
   const theme = Colors[scheme];
   const grade = getCardGrade(card);
+  const [photoViewer, setPhotoViewer] = useState<{ uri: string; label: string } | null>(null);
+
+  function openPhoto(variant: 'front' | 'back') {
+    const uri =
+      variant === 'front'
+        ? getCardImageUri(card.name, card.set, card.imageUri)
+        : getCardBackImageUri(card.backImageUri);
+
+    if (!uri) return;
+
+    setPhotoViewer({ uri, label: variant === 'front' ? 'Front' : 'Back' });
+  }
 
   return (
+    <>
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.topRow} lightColor="transparent" darkColor="transparent">
         <Pressable onPress={onBack} style={styles.backLink}>
@@ -48,8 +64,8 @@ export default function CardDetailView({
       </Text>
 
       <View style={styles.photoRow} lightColor="transparent" darkColor="transparent">
-        <PhotoSlot label="Front" card={card} variant="front" />
-        <PhotoSlot label="Back" card={card} variant="back" />
+        <PhotoSlot label="Front" card={card} variant="front" onPress={() => openPhoto('front')} />
+        <PhotoSlot label="Back" card={card} variant="back" onPress={() => openPhoto('back')} />
       </View>
 
       <CardPriceChart card={card} formatMoney={formatMoney} />
@@ -85,6 +101,13 @@ export default function CardDetailView({
         <Text style={styles.demoNote}>Demo market data for prototyping</Text>
       </View>
     </ScrollView>
+
+    <FullscreenPhotoViewer
+      uri={photoViewer?.uri ?? null}
+      label={photoViewer?.label}
+      onClose={() => setPhotoViewer(null)}
+    />
+    </>
   );
 }
 
@@ -92,22 +115,45 @@ function PhotoSlot({
   label,
   card,
   variant,
+  onPress,
 }: {
   label: string;
   card: PokemonCard;
   variant: 'front' | 'back';
+  onPress: () => void;
 }) {
+  const uri =
+    variant === 'front'
+      ? getCardImageUri(card.name, card.set, card.imageUri)
+      : getCardBackImageUri(card.backImageUri);
+  const canOpen = Boolean(uri);
+
+  const image = (
+    <CardImage
+      name={card.name}
+      set={card.set}
+      imageUri={card.imageUri}
+      backImageUri={card.backImageUri}
+      size="xl"
+      variant={variant}
+    />
+  );
+
   return (
     <View style={styles.photoSlot} lightColor={Colors.light.surface} darkColor={Colors.dark.surface}>
       <Text style={styles.photoLabel}>{label}</Text>
-      <CardImage
-        name={card.name}
-        set={card.set}
-        imageUri={card.imageUri}
-        backImageUri={card.backImageUri}
-        size="xl"
-        variant={variant}
-      />
+      {canOpen ? (
+        <Pressable
+          onPress={onPress}
+          style={({ pressed }) => [pressed && styles.photoPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={`View ${label.toLowerCase()} photo full screen`}>
+          {image}
+          <Text style={styles.photoHint}>Tap to enlarge</Text>
+        </Pressable>
+      ) : (
+        image
+      )}
     </View>
   );
 }
@@ -199,6 +245,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 10,
     opacity: 0.65,
+  },
+  photoPressed: {
+    opacity: 0.88,
+  },
+  photoHint: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 8,
+    opacity: 0.55,
+    textAlign: 'center',
   },
   table: {
     borderRadius: 16,
